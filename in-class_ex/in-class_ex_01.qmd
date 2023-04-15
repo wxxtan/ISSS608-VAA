@@ -1,0 +1,4 @@
+---
+title: "Week 1: In-class Exercise"
+sidebar: false
+---

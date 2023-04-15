@@ -1,166 +1,37 @@
 ---
-title: "ISSS608 Visual Analytics & Applications Week 1"
+title: "About Me"
+image: images/profilepic.jpeg
+about:
+  template: jolla
+  links:
+    - icon: linkedin
+      text: LinkedIn
+      href: https://www.linkedin.com/in/wilson-tan-88141a253/
+    - icon: github
+      text: Github
+      href: https://www.github.com/wxxtan
+sidebar: false
+pagetitle: "Welcome!"
 ---
 
-Begin Week 1!
+Wilson is currently working at the Housing & Development Board as a Senior Business Analyst by day. He is part of the Data Science Team under the Board's Estate Administration & Property Group.
 
-```{r, include = FALSE}
-pacman::p_load(tidyverse)
-```
+By night, he transforms into a part-time student pursuing a Master of Information Technology in Business at Singapore Management University. Beyond that, what little pockets of free time left is spent picking up tennis in an attempt to live up to his given name.
 
-## Load dataset
+## Education
 
-```{r}
-exam_data <- read_csv("data/Exam_data.csv")
-```
+**Singapore Management University**
 
-## Comparing R graphics with ggplot2
+Master of Information Technology in Business \| Aug 2021 - Present
 
-::: panel-tabset
-#### R graphics
+**National University of Singapore**
 
-```{r}
-hist(exam_data$MATHS)
+B. Soc. Sci in Economics with Honours (Highest Distinction) \| Aug 2014 - Jul 2018
 
-```
+[Published Honour's Thesis]{.underline}
 
-#### ggplot2
+*Did the ASEAN-China Free Trade Area Actually Increase ASEAN Countries' Exports to China?*
 
-```{r}
-ggplot(data=exam_data, aes(x = MATHS)) +
-  geom_histogram(bins=10, 
-                 boundary = 100,
-                 color="black", 
-                 fill="grey") +
-  ggtitle("Distribution of Maths scores")
-```
-:::
+## Experience
 
-::: callout-note
-## So ggplot2 is better!
-:::
-
-## Exploring ggplot2
-
-::: panel-tabset
-#### Bar chart
-
-```{r}
-ggplot(data = exam_data,
-       aes(x = RACE)) +
-  geom_bar()
-```
-
-#### Dot plot
-
-```{r}
-ggplot(data = exam_data,
-       aes(x = MATHS)) +
-  geom_dotplot(dotsize = 0.5,
-               binwidth = 2.5) +
-  scale_y_continuous(NULL,
-                     breaks = NULL)
-```
-
-#### Histogram
-
-```{r}
-ggplot(data = exam_data,
-       aes(x = MATHS,
-           fill = GENDER)) +
-  geom_histogram(bins = 20,
-                 color = "grey20") +
-  scale_fill_manual(values = c("pink", "steelblue"))
-```
-
-#### Kernel density
-
-```{r}
-ggplot(data = exam_data,
-       aes(x = MATHS,
-           color = GENDER)) +
-  geom_density()
-```
-
-#### Box plot
-
-```{r}
-ggplot(data = exam_data,
-       aes(y = MATHS,
-           x = GENDER,
-           fill = GENDER)) +
-  geom_boxplot(notch = TRUE) +
-  scale_fill_manual(values = c("pink", "steelblue"))
-```
-
-#### Violin plot
-
-```{r}
-ggplot(data = exam_data,
-       aes(y = MATHS,
-           x = GENDER)) +
-  geom_violin()
-```
-
-#### Scatterplot
-
-```{r}
-ggplot(data = exam_data,
-       aes(x = MATHS,
-           y = ENGLISH)) +
-  geom_point() +
-  coord_cartesian(xlim = c(0, 100),
-                  ylim = c(0, 100))
-```
-:::
-
-## Some other elements...
-
-#### Combining geom objects + stat
-
-```{r}
-ggplot(data = exam_data,
-       aes(y = MATHS,
-           x = GENDER,
-           fill = GENDER)) +
-  geom_boxplot(notch = TRUE) +
-  geom_point(position = "jitter",
-             size = 0.5) +
-  scale_fill_manual(values = c("pink", "steelblue")) +
-  stat_summary(geom = "point",
-               fun = "mean",
-               colour = "red",
-               size = 4) +
-  theme_classic()
-```
-
-::: callout-note
-## Theme used: Classic
-:::
-
-#### Scatterplot with best fit line!
-
-```{r}
-ggplot(data = exam_data,
-       aes(x = MATHS,
-           y = ENGLISH)) +
-  geom_point() +
-  geom_smooth(method = lm,
-              linewidth = 0.5)
-```
-
-#### Working with facets
-
-```{r}
-ggplot(data = exam_data,
-       aes(x = MATHS)) +
-  geom_histogram(bins = 20) +
-  facet_wrap(~ CLASS) +
-  theme_minimal()
-```
-
-::: callout-caution
-## Theme used: Minimal
-:::
-
-And that's it for Week 1!
+**Housing & Development Board** \| Senior Business Analyst \| Sep 2018 - present

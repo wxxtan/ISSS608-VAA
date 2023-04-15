@@ -1,0 +1,168 @@
+---
+title: "Week 1: Hands-on Exercise"
+sidebar: false
+pagetitle: "Hands-on Ex 01"
+---
+
+Let's explore the ggplot2 package in R!
+
+```{r, include = FALSE}
+pacman::p_load(tidyverse)
+```
+
+## Load dataset
+
+```{r}
+exam_data <- read_csv("data_01/Exam_data.csv")
+```
+
+## Comparing R graphics with ggplot2
+
+::: panel-tabset
+#### R graphics
+
+```{r}
+hist(exam_data$MATHS)
+
+```
+
+#### ggplot2
+
+```{r}
+ggplot(data=exam_data, aes(x = MATHS)) +
+  geom_histogram(bins=10, 
+                 boundary = 100,
+                 color="black", 
+                 fill="grey") +
+  ggtitle("Distribution of Maths scores")
+```
+:::
+
+::: callout-note
+## ggplot2 has a more complicated syntax, but offers much more customization options to help you make your data visualizations beautiful.
+:::
+
+## Exploring ggplot2
+
+::: panel-tabset
+#### Bar chart
+
+```{r}
+ggplot(data = exam_data,
+       aes(x = RACE)) +
+  geom_bar()
+```
+
+#### Dot plot
+
+```{r}
+ggplot(data = exam_data,
+       aes(x = MATHS)) +
+  geom_dotplot(dotsize = 0.5,
+               binwidth = 2.5) +
+  scale_y_continuous(NULL,
+                     breaks = NULL)
+```
+
+#### Histogram
+
+```{r}
+ggplot(data = exam_data,
+       aes(x = MATHS,
+           fill = GENDER)) +
+  geom_histogram(bins = 20,
+                 color = "grey20") +
+  scale_fill_manual(values = c("pink", "steelblue"))
+```
+
+#### Kernel density
+
+```{r}
+ggplot(data = exam_data,
+       aes(x = MATHS,
+           color = GENDER)) +
+  geom_density()
+```
+
+#### Box plot
+
+```{r}
+ggplot(data = exam_data,
+       aes(y = MATHS,
+           x = GENDER,
+           fill = GENDER)) +
+  geom_boxplot(notch = TRUE) +
+  scale_fill_manual(values = c("pink", "steelblue"))
+```
+
+#### Violin plot
+
+```{r}
+ggplot(data = exam_data,
+       aes(y = MATHS,
+           x = GENDER)) +
+  geom_violin()
+```
+
+#### Scatterplot
+
+```{r}
+ggplot(data = exam_data,
+       aes(x = MATHS,
+           y = ENGLISH)) +
+  geom_point() +
+  coord_cartesian(xlim = c(0, 100),
+                  ylim = c(0, 100))
+```
+:::
+
+## Some other elements...
+
+#### Combining geom objects + stat
+
+```{r}
+ggplot(data = exam_data,
+       aes(y = MATHS,
+           x = GENDER,
+           fill = GENDER)) +
+  geom_boxplot(notch = TRUE) +
+  geom_point(position = "jitter",
+             size = 0.5) +
+  scale_fill_manual(values = c("pink", "steelblue")) +
+  stat_summary(geom = "point",
+               fun = "mean",
+               colour = "red",
+               size = 4) +
+  theme_classic()
+```
+
+::: callout-note
+## Theme used: Classic
+:::
+
+#### Scatterplot with best fit line!
+
+```{r}
+ggplot(data = exam_data,
+       aes(x = MATHS,
+           y = ENGLISH)) +
+  geom_point() +
+  geom_smooth(method = lm,
+              linewidth = 0.5)
+```
+
+#### Working with facets
+
+```{r}
+ggplot(data = exam_data,
+       aes(x = MATHS)) +
+  geom_histogram(bins = 20) +
+  facet_wrap(~ CLASS) +
+  theme_minimal()
+```
+
+::: callout-caution
+## Theme used: Minimal
+:::
+
+And that's it for Week 1!
