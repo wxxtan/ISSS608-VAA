@@ -2,9 +2,9 @@ project:
   type: website
 
 website:
-  title: "ISSS608 VAA (Wilson)"
+  title: "ISSS608 Visual Analytics & Applications Coursework<br>by Wilson Tan"
   navbar:
-    left:
+    right:
       - sidebar:handson
       - sidebar:inclass
       - sidebar:takehome
