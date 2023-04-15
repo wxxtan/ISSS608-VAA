@@ -5,8 +5,6 @@ website:
   title: "ISSS608 VAA (Wilson)"
   navbar:
     left:
-      - text: Home
-        file: index.qmd
       - sidebar:handson
       - sidebar:inclass
       - sidebar:takehome
