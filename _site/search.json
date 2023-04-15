@@ -35,6 +35,20 @@
     "text": "Some other elements…\n\nCombining geom objects + stat\n\nggplot(data = exam_data,\n       aes(y = MATHS,\n           x = GENDER,\n           fill = GENDER)) +\n  geom_boxplot(notch = TRUE) +\n  geom_point(position = \"jitter\",\n             size = 0.5) +\n  scale_fill_manual(values = c(\"pink\", \"steelblue\")) +\n  stat_summary(geom = \"point\",\n               fun = \"mean\",\n               colour = \"red\",\n               size = 4) +\n  theme_classic()\n\n\n\n\n\n\n\n\n\n\nTheme used: Classic\n\n\n\n\n\n\n\n\nScatterplot with best fit line!\n\nggplot(data = exam_data,\n       aes(x = MATHS,\n           y = ENGLISH)) +\n  geom_point() +\n  geom_smooth(method = lm,\n              linewidth = 0.5)\n\n`geom_smooth()` using formula = 'y ~ x'\n\n\n\n\n\n\n\nWorking with facets\n\nggplot(data = exam_data,\n       aes(x = MATHS)) +\n  geom_histogram(bins = 20) +\n  facet_wrap(~ CLASS) +\n  theme_minimal()\n\n\n\n\n\n\n\n\n\n\nTheme used: Minimal\n\n\n\n\n\n\nAnd that’s it for Week 1!"
   },
   {
+    "objectID": "in-class_ex/in-class_ex_01.html",
+    "href": "in-class_ex/in-class_ex_01.html",
+    "title": "Week 1: In-class Exercise",
+    "section": "",
+    "text": "You may access it here."
+  },
+  {
+    "objectID": "in-class_ex/in-class_ex_01.html#creating-my-first-tableau-dashboard",
+    "href": "in-class_ex/in-class_ex_01.html#creating-my-first-tableau-dashboard",
+    "title": "Week 1: In-class Exercise",
+    "section": "",
+    "text": "You may access it here."
+  },
+  {
     "objectID": "index.html",
     "href": "index.html",
     "title": "About Me",
