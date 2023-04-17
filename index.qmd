@@ -1,8 +1,9 @@
 ---
 title: "About Me"
-image: images/profilepic.jpeg
+image: images/monitor.png
 about:
   template: jolla
+  image-shape: rounded
   links:
     - icon: linkedin
       text: LinkedIn
