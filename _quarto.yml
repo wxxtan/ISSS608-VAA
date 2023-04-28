@@ -14,7 +14,8 @@ website:
       style: "docked"
       collapse-level: 2
       contents:
-        href: hands-on_ex/hands-on_ex_01.qmd
+        - href: hands-on_ex/hands-on_ex_01.qmd
+        - href: hands-on_ex/hands-on_ex_02.qmd
     - id: inclass
       title: "In-class Exercises"
       style: "docked"

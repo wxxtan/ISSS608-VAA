@@ -1,0 +1,282 @@
+---
+title: "Week 2: Hands-on Exercise"
+sidebar: false
+pagetitle: "Hands-on Ex 02"
+---
+
+```{r, include = FALSE}
+pacman::p_load(ggrepel, patchwork, 
+               ggthemes, hrbrthemes,
+               tidyverse)
+```
+
+## Load dataset
+
+```{r}
+exam_data <- read_csv("data_02/Exam_data.csv")
+```
+
+## Why use `ggrepel`?
+
+When there is a large number of data points, it may become difficult to annotate the graph using traditional `ggplot2`:
+
+::: panel-tabset
+#### Plot
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data=exam_data, 
+       aes(x= MATHS, 
+           y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              linewidth=0.5) +  
+  geom_label(aes(label = ID), 
+             hjust = .5, 
+             vjust = -.5) +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+
+#### Code
+
+```{r, results = 'hide', fig.show = 'hide', message = FALSE}
+ggplot(data=exam_data, 
+       aes(x= MATHS, 
+           y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              linewidth=0.5) +  
+  geom_label(aes(label = ID), 
+             hjust = .5, 
+             vjust = -.5) +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+:::
+
+To use `ggrepel`, we just need to replace `geom_text()` by `geom_text_repel()` and `geom_label()` by `geom_label_repel()`
+
+## Example of using ggrepel
+
+::: panel-tabset
+#### Plot
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data=exam_data, 
+       aes(x= MATHS, 
+           y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              size=0.5) +  
+  geom_label_repel(aes(label = ID), 
+                   fontface = "bold") +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+
+#### Code
+
+```{r, results = 'hide', fig.show = 'hide', message = FALSE}
+ggplot(data=exam_data, 
+       aes(x= MATHS, 
+           y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              size=0.5) +  
+  geom_label_repel(aes(label = ID), 
+                   fontface = "bold") +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+:::
+
+## Themes! Themes! Cool themes! From ggtheme package
+
+While `ggplot2` has some built-in themes such as `theme_gray()`, `theme_bw()`, `theme_classic()`, `theme_dark()`, `theme_light()`, `theme_linedraw()`, `theme_minimal()`, and `theme_void()`, we can also use some cool themes from `ggtheme`.
+
+::: panel-tabset
+#### theme_gray()
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  theme_gray() +
+  ggtitle("Distribution of Maths scores") 
+```
+
+#### The Economist
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  ggtitle("Distribution of Maths scores") +
+  theme_economist()
+```
+
+#### WSJ
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  ggtitle("Distribution of Maths scores") +
+  theme_wsj()
+```
+
+#### Old Excel
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  ggtitle("Distribution of Maths scores") +
+  theme_excel()
+```
+:::
+
+## Using `hrbthemes` package
+
+`hrbthemes` focuses on typographic elements, allowing you to customize label placements and fonts used.
+
+::: panel-tabset
+#### Plot
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  ggtitle("Distribution of Maths scores") +
+  theme_ipsum(axis_title_size = 18,
+              base_size = 15,
+              grid = "Y")
+```
+
+#### Code
+
+```{r, results = 'hide', fig.show = 'hide', message = FALSE, warning = FALSE}
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  ggtitle("Distribution of Maths scores") +
+  theme_ipsum(axis_title_size = 18,
+              base_size = 15,
+              grid = "")
+```
+:::
+
+::: callout-tip
+## Tips
+
+-   `axis_title_size` alters the font size of the axis title
+
+-   `base_size` messes with the default axis labels
+
+-   `grid` determines whether you see grids. It accepts the following values: TRUE, FALSE, X, x, Y, y, or a combination, i.e., XY
+:::
+
+## `patchwork`! Patching multiple graphs together
+
+Imagine that you have multiple graphs:
+
+```{r}
+p1 <- ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") + 
+  coord_cartesian(xlim=c(0,100)) +
+  ggtitle("Distribution of Maths scores")
+```
+
+```{r}
+p2 <- ggplot(data=exam_data, 
+             aes(x = ENGLISH)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  coord_cartesian(xlim=c(0,100)) +
+  ggtitle("Distribution of English scores")
+```
+
+```{r}
+p3 <- ggplot(data=exam_data, 
+             aes(x= MATHS, 
+                 y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              size=0.5) +  
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+
+You can combine two graphs together side by side:
+
+::: panel-tabset
+#### Plot
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+p1 + p2
+```
+
+#### Code
+
+```{r, results = 'hide', fig.show = 'hide', message = FALSE, warning = FALSE}
+p1 + p2
+```
+:::
+
+Or combine three of them using the following operators:
+
+-   "\|" operator to place the plots side by side
+
+-   "/" operator to stack one on top of another
+
+-   "()" operator the define the sequence of plotting
+
+And also add the following:
+
+-   `plot_annotation()`, which will automatically tag the different figures
+-   `inset_element()`, which will add another plot based on your specified position (not demonstrated)
+
+::: panel-tabset
+#### Plot
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+((p1 / p2) | p3) + 
+  plot_annotation(tag_levels = 'A') & theme_economist()
+```
+
+#### Code
+
+```{r, results = 'hide', fig.show = 'hide', message = FALSE, warning = FALSE}
+((p1 / p2) | p3) + 
+  plot_annotation(tag_levels = 'A') & theme_economist()
+```
+:::
