@@ -37,7 +37,7 @@ format:
     theme: flatly
     css: styles.css
     toc: false
-    page-layout: full
+    page-layout: article
 
 editor: visual
 
