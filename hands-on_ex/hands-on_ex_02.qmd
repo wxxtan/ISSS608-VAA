@@ -19,7 +19,7 @@ pacman::p_load(ggrepel, patchwork,
 ## Load dataset
 
 ```{r}
-exam_data <- read_csv("data_02/Exam_data.csv")
+exam_data <- read_csv("data/data_02/Exam_data.csv")
 ```
 
 ## Why use `ggrepel`?

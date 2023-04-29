@@ -17,7 +17,7 @@ pacman::p_load(ggiraph, plotly, patchwork, DT, tidyverse, dplyr)
 ## Load dataset
 
 ```{r}
-exam_data <- read_csv("data_03/Exam_data.csv")
+exam_data <- read_csv("data/data_03/Exam_data.csv")
 ```
 
 `ggiraph` is a `ggplot2` extension that can allow plots to become interactive. Three arguments are accepted:
@@ -318,7 +318,8 @@ subplot(ggplotly(p1),
 Example of usage below:
 
 ```{r, message = FALSE}
-d <- highlight_key(exam_data) 
+#| column: page
+d <- highlight_key(exam_data[c('ID', 'CLASS', 'GENDER', 'RACE', 'ENGLISH','MATHS', 'SCIENCE')]) 
 p <- ggplot(d, 
             aes(ENGLISH, 
                 MATHS)) + 
@@ -331,7 +332,7 @@ gg <- highlight(ggplotly(p),
 
 crosstalk::bscols(gg,               
                   DT::datatable(d), 
-                  widths = 5)        
+                  widths = 4)        
 ```
 
 ## Basics of animation using `gganimate`
@@ -351,7 +352,7 @@ pacman::p_load(readxl, gifski, gapminder,
 
 ```{r, warning = FALSE}
 col <- c("Country", "Continent")
-globalPop <- read_xls("data_03/GlobalPopulation.xls",
+globalPop <- read_xls("data/data_03/GlobalPopulation.xls",
                       sheet="Data") %>%
   mutate_each_(funs(factor(.)), col) %>%
   mutate(Year = as.integer(Year))

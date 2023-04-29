@@ -19,7 +19,7 @@ pacman::p_load(tidyverse)
 ## Load dataset
 
 ```{r}
-exam_data <- read_csv("data_01/Exam_data.csv")
+exam_data <- read_csv("data/data_01/Exam_data.csv")
 ```
 
 ## Comparing R graphics with ggplot2
