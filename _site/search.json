@@ -74,7 +74,7 @@
     "href": "hands-on_ex/hands-on_ex_02.html#using-hrbthemes-package",
     "title": "Week 2: Hands-on Exercise",
     "section": "Using hrbthemes package",
-    "text": "Using hrbthemes package\nhrbthemes focuses on typographic elements, allowing you to customize label placements and fonts used.\n\nPlotCode\n\n\n\n\n\n\n\n\n\n\nggplot(data=exam_data, \n             aes(x = MATHS)) +\n  geom_histogram(bins=20, \n                 boundary = 100,\n                 color=\"grey25\", \n                 fill=\"grey90\") +\n  ggtitle(\"Distribution of Maths scores\") +\n  theme_ipsum(axis_title_size = 18,\n              base_size = 15,\n              grid = \"\")\n\n\n\n\n\n\n\n\n\n\nTips\n\n\n\n\naxis_title_size alters the font size of the axis title\nbase_size messes with the default axis labels\ngrid determines whether you see grids. It accepts the following values: TRUE, FALSE, X, x, Y, y, or a combination, i.e., c(X, Y)"
+    "text": "Using hrbthemes package\nhrbthemes focuses on typographic elements, allowing you to customize label placements and fonts used.\n\nPlotCode\n\n\n\n\n\n\n\n\n\n\nggplot(data=exam_data, \n             aes(x = MATHS)) +\n  geom_histogram(bins=20, \n                 boundary = 100,\n                 color=\"grey25\", \n                 fill=\"grey90\") +\n  ggtitle(\"Distribution of Maths scores\") +\n  theme_ipsum(axis_title_size = 18,\n              base_size = 15,\n              grid = \"\")\n\n\n\n\n\n\n\n\n\n\nTips\n\n\n\n\naxis_title_size alters the font size of the axis title\nbase_size messes with the default axis labels\ngrid determines whether you see grids. It accepts the following values: TRUE, FALSE, X, x, Y, y, or a combination, i.e., XY"
   },
   {
     "objectID": "hands-on_ex/hands-on_ex_02.html#patchwork-patching-multiple-graphs-together",
@@ -82,6 +82,62 @@
     "title": "Week 2: Hands-on Exercise",
     "section": "patchwork! Patching multiple graphs together",
     "text": "patchwork! Patching multiple graphs together\nImagine that you have multiple graphs:\n\np1 &lt;- ggplot(data=exam_data, \n             aes(x = MATHS)) +\n  geom_histogram(bins=20, \n                 boundary = 100,\n                 color=\"grey25\", \n                 fill=\"grey90\") + \n  coord_cartesian(xlim=c(0,100)) +\n  ggtitle(\"Distribution of Maths scores\")\n\n\np2 &lt;- ggplot(data=exam_data, \n             aes(x = ENGLISH)) +\n  geom_histogram(bins=20, \n                 boundary = 100,\n                 color=\"grey25\", \n                 fill=\"grey90\") +\n  coord_cartesian(xlim=c(0,100)) +\n  ggtitle(\"Distribution of English scores\")\n\n\np3 &lt;- ggplot(data=exam_data, \n             aes(x= MATHS, \n                 y=ENGLISH)) +\n  geom_point() +\n  geom_smooth(method=lm, \n              size=0.5) +  \n  coord_cartesian(xlim=c(0,100),\n                  ylim=c(0,100)) +\n  ggtitle(\"English scores versus Maths scores for Primary 3\")\n\nYou can combine two graphs together side by side:\n\nPlotCode\n\n\n\n\n\n\n\n\n\n\np1 + p2\n\n\n\n\nOr combine three of them using the following operators:\n\n“|” operator to place the plots side by side\n“/” operator to stack one on top of another\n“()” operator the define the sequence of plotting\n\nAnd also add the following:\n\nplot_annotation(), which will automatically tag the different figures\ninset_element(), which will add another plot based on your specified position (not demonstrated)\n\n\nPlotCode\n\n\n\n\n\n\n\n\n\n\n((p1 / p2) | p3) + \n  plot_annotation(tag_levels = 'A') & theme_economist()"
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html",
+    "href": "hands-on_ex/hands-on_ex_03.html",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "",
+    "text": "exam_data &lt;- read_csv(\"data_03/Exam_data.csv\")\n\nRows: 322 Columns: 7\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (4): ID, CLASS, GENDER, RACE\ndbl (3): ENGLISH, MATHS, SCIENCE\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\n\n\nggiraph is a ggplot2 extension that can allow plots to become interactive. Three arguments are accepted:\n\nTooltip\nOnclick\nData_id\n\nIts usage will be demonstrated via the example code chunks below."
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html#load-dataset",
+    "href": "hands-on_ex/hands-on_ex_03.html#load-dataset",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "",
+    "text": "exam_data &lt;- read_csv(\"data_03/Exam_data.csv\")\n\nRows: 322 Columns: 7\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (4): ID, CLASS, GENDER, RACE\ndbl (3): ENGLISH, MATHS, SCIENCE\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\n\n\nggiraph is a ggplot2 extension that can allow plots to become interactive. Three arguments are accepted:\n\nTooltip\nOnclick\nData_id\n\nIts usage will be demonstrated via the example code chunks below."
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html#tooltip-aesthetic",
+    "href": "hands-on_ex/hands-on_ex_03.html#tooltip-aesthetic",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "Tooltip aesthetic",
+    "text": "Tooltip aesthetic\n\nexam_data$tooltip &lt;- c(paste0(     \n  \"Name = \", exam_data$ID,         \n  \"\\n Class = \", exam_data$CLASS))\n\np &lt;- ggplot(data=exam_data, \n       aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(tooltip = exam_data$tooltip),\n    stackgroups = TRUE, \n    binwidth = 1, \n    method = \"histodot\") +\n  scale_y_continuous(NULL, \n                     breaks = NULL)\ngirafe(\n  ggobj = p,\n  width_svg = 8,\n  height_svg = 8*0.618\n)\n\n\n\n\n\n\n\n\n\n\n\nHow to achieve interactivity?\n\n\n\nUse the interactive version of ggplot2 geom functions. Then, use girafe() to generate an svg object to be displayed on an html page.\nIn this example, hovering over data points reveal the student’s name and class for that data point.\n\n\n\n\n\n\n\n\nFurther customization\n\n\n\nggiraph objects can be customized via options = and opts_tooltip() by adding css declarations.\n\n\nYou can also display statistics on tooltips!\n\ntooltip &lt;- function(y, ymax, accuracy = .01) {\n  mean &lt;- scales::number(y, accuracy = accuracy)\n  sem &lt;- scales::number(ymax - y, accuracy = accuracy)\n  paste(\"Mean maths scores:\", mean, \"+/-\", sem)\n}\n\ngg_point &lt;- ggplot(data=exam_data, \n                   aes(x = RACE),\n) +\n  stat_summary(aes(y = MATHS, \n                   tooltip = after_stat(  \n                     tooltip(y, ymax))),  \n    fun.data = \"mean_se\", \n    geom = GeomInteractiveCol,  \n    fill = \"light blue\"\n  ) +\n  stat_summary(aes(y = MATHS),\n    fun.data = mean_se,\n    geom = \"errorbar\", width = 0.2, size = 0.2\n  )\n\nWarning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.\nℹ Please use `linewidth` instead.\n\ngirafe(ggobj = gg_point,\n       width_svg = 8,\n       height_svg = 8*0.618)"
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html#data_id-aesthetic",
+    "href": "hands-on_ex/hands-on_ex_03.html#data_id-aesthetic",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "Data_id aesthetic",
+    "text": "Data_id aesthetic\n\np &lt;- ggplot(data=exam_data,\n       aes(x = MATHS)) +\n  geom_dotplot_interactive(              \n    aes(tooltip = CLASS, \n        data_id = CLASS),              \n    stackgroups = TRUE,                  \n    binwidth = 1,                        \n    method = \"histodot\") +               \n  scale_y_continuous(NULL,               \n                     breaks = NULL)\ngirafe(                                  \n  ggobj = p,                             \n  width_svg = 6,                         \n  height_svg = 6*0.618\n)                                                                     \n\n\n\n\n\n\n\n\n\n\n\nInteractivity\n\n\n\nElements associated with a certain data_id will be highlighted when your cursor hovers over a data point with that data_id. In this example, this was achieved in addition to the tooltip aesthetic (that will display the data_id)."
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html#onclick-aesthetic",
+    "href": "hands-on_ex/hands-on_ex_03.html#onclick-aesthetic",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "Onclick aesthetic",
+    "text": "Onclick aesthetic\nonclick can be used to hyperlink to other websites on the Internet.\n\nexam_data$onclick &lt;- sprintf(\"window.open(\\\"%s%s\\\")\",\n\"https://www.moe.gov.sg/schoolfinder?journey=Primary%20school\",\nas.character(exam_data$ID))\n\np &lt;- ggplot(data=exam_data, \n       aes(x = MATHS)) +\n  geom_dotplot_interactive(              \n    aes(onclick = onclick),              \n    stackgroups = TRUE,                  \n    binwidth = 1,                        \n    method = \"histodot\") +               \n  scale_y_continuous(NULL,               \n                     breaks = NULL)\ngirafe(                                  \n  ggobj = p,                             \n  width_svg = 6,                         \n  height_svg = 6*0.618)                               \n\n\n\n\n\n\n\n\n\n\n\nJavascript instructions\n\n\n\nNote the additional column created in the dataset exam_data called onclick that specifies the javascript to open a window with the given URL. This is necessary to make onclick work!"
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html#coordinating-between-two-plots",
+    "href": "hands-on_ex/hands-on_ex_03.html#coordinating-between-two-plots",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "Coordinating between two plots",
+    "text": "Coordinating between two plots\npatchwork can be used with what we have learnt today as well! The two plots will show the data points with the same data_id upon cursor hover:\n\np1 &lt;- ggplot(data=exam_data, \n       aes(x = MATHS)) +\n  geom_dotplot_interactive(              \n    aes(data_id = ID,\n        tooltip = ID),              \n    stackgroups = TRUE,                  \n    binwidth = 1,                        \n    method = \"histodot\") +  \n  coord_cartesian(xlim=c(0,100)) + \n  scale_y_continuous(NULL,               \n                     breaks = NULL)\n\np2 &lt;- ggplot(data=exam_data, \n       aes(x = ENGLISH)) +\n  geom_dotplot_interactive(              \n    aes(data_id = ID,\n        tooltip = ID),              \n    stackgroups = TRUE,                  \n    binwidth = 1,                        \n    method = \"histodot\") + \n  coord_cartesian(xlim=c(0,100)) + \n  scale_y_continuous(NULL,               \n                     breaks = NULL)\n\ngirafe(code = print(p1 + p2), \n       width_svg = 6,\n       height_svg = 3,\n       options = list(\n         opts_hover(css = \"fill: #202020;\"),\n         opts_hover_inv(css = \"opacity:0.2;\")\n         )\n       )"
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html#using-plotly-methods-to-achieve-interactive-data-visualization",
+    "href": "hands-on_ex/hands-on_ex_03.html#using-plotly-methods-to-achieve-interactive-data-visualization",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "Using plotly methods to achieve interactive data visualization",
+    "text": "Using plotly methods to achieve interactive data visualization\nThere are two ways of doing this:\n\nplot_ly()\nggplotly()\n\n\nplot_ly()Code\n\n\n\n\n\n\n\n\n\n\n\nplot_ly(data = exam_data, \n        x = ~ENGLISH, \n        y = ~MATHS, \n        color = ~RACE)\n\n\n\n\n\nggplotly()Code\n\n\n\n\n\n\n\n\n\n\n\np &lt;- ggplot(data=exam_data, \n            aes(x = MATHS,\n                y = ENGLISH,\n                color = RACE)) +\n  geom_point(size=1) +\n  coord_cartesian(xlim=c(0,100),\n                  ylim=c(0,100))\nggplotly(p)\n\n\n\n\nYou can achieve a coordinated linked plot using highlight_key() and subplot() to place the plots side by side.\n\nplot_ly()Code\n\n\n\n\n\n\n\n\n\n\n\nplot_ly(data = exam_data, \n        x = ~ENGLISH, \n        y = ~MATHS, \n        color = ~RACE)\n\n\n\n\n\nPlotCode\n\n\n\n\n\n\n\n\n\n\n\nd &lt;- highlight_key(exam_data)\np1 &lt;- ggplot(data=d, \n            aes(x = MATHS,\n                y = ENGLISH)) +\n  geom_point(size=1) +\n  coord_cartesian(xlim=c(0,100),\n                  ylim=c(0,100))\n\np2 &lt;- ggplot(data=d, \n            aes(x = MATHS,\n                y = SCIENCE)) +\n  geom_point(size=1) +\n  coord_cartesian(xlim=c(0,100),\n                  ylim=c(0,100))\nsubplot(ggplotly(p1),\n        ggplotly(p2))"
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html#using-crosstalk-methods",
+    "href": "hands-on_ex/hands-on_ex_03.html#using-crosstalk-methods",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "Using crosstalk methods",
+    "text": "Using crosstalk methods\nExample of usage below:\n\nd &lt;- highlight_key(exam_data) \np &lt;- ggplot(d, \n            aes(ENGLISH, \n                MATHS)) + \n  geom_point(size=1) +\n  coord_cartesian(xlim=c(0,100),\n                  ylim=c(0,100))\n\ngg &lt;- highlight(ggplotly(p),        \n                \"plotly_selected\")  \n\ncrosstalk::bscols(gg,               \n                  DT::datatable(d), \n                  widths = 5)"
   },
   {
     "objectID": "in-class_ex/in-class_ex_01.html",

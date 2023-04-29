@@ -1,0 +1,330 @@
+---
+title: "Week 3: Hands-on Exercise"
+sidebar: false
+pagetitle: "Hands-on Ex 03"
+---
+
+```{r, include = FALSE}
+pacman::p_load(ggiraph, plotly, patchwork, DT, tidyverse)
+```
+
+## Load dataset
+
+```{r}
+exam_data <- read_csv("data_03/Exam_data.csv")
+```
+
+`ggiraph` is a `ggplot2` extension that can allow plots to become interactive. Three arguments are accepted:
+
+-   Tooltip
+
+-   Onclick
+
+-   Data_id
+
+Its usage will be demonstrated via the example code chunks below.
+
+## Tooltip aesthetic
+
+```{r}
+exam_data$tooltip <- c(paste0(     
+  "Name = ", exam_data$ID,         
+  "\n Class = ", exam_data$CLASS))
+
+p <- ggplot(data=exam_data, 
+       aes(x = MATHS)) +
+  geom_dotplot_interactive(
+    aes(tooltip = exam_data$tooltip),
+    stackgroups = TRUE, 
+    binwidth = 1, 
+    method = "histodot") +
+  scale_y_continuous(NULL, 
+                     breaks = NULL)
+girafe(
+  ggobj = p,
+  width_svg = 8,
+  height_svg = 8*0.618
+)
+```
+
+::: callout-note
+## How to achieve interactivity?
+
+Use the interactive version of `ggplot2` geom functions. Then, use `girafe()` to generate an svg object to be displayed on an html page.
+
+In this example, hovering over data points reveal the student's name and class for that data point.
+:::
+
+::: callout-note
+## Further customization
+
+`ggiraph` objects can be customized via `options =` and `opts_tooltip()` by adding css declarations.
+:::
+
+You can also display statistics on tooltips!
+
+```{r}
+tooltip <- function(y, ymax, accuracy = .01) {
+  mean <- scales::number(y, accuracy = accuracy)
+  sem <- scales::number(ymax - y, accuracy = accuracy)
+  paste("Mean maths scores:", mean, "+/-", sem)
+}
+
+gg_point <- ggplot(data=exam_data, 
+                   aes(x = RACE),
+) +
+  stat_summary(aes(y = MATHS, 
+                   tooltip = after_stat(  
+                     tooltip(y, ymax))),  
+    fun.data = "mean_se", 
+    geom = GeomInteractiveCol,  
+    fill = "light blue"
+  ) +
+  stat_summary(aes(y = MATHS),
+    fun.data = mean_se,
+    geom = "errorbar", width = 0.2, size = 0.2
+  )
+
+girafe(ggobj = gg_point,
+       width_svg = 8,
+       height_svg = 8*0.618)
+```
+
+## Data_id aesthetic
+
+```{r}
+p <- ggplot(data=exam_data,
+       aes(x = MATHS)) +
+  geom_dotplot_interactive(              
+    aes(tooltip = CLASS, 
+        data_id = CLASS),              
+    stackgroups = TRUE,                  
+    binwidth = 1,                        
+    method = "histodot") +               
+  scale_y_continuous(NULL,               
+                     breaks = NULL)
+girafe(                                  
+  ggobj = p,                             
+  width_svg = 6,                         
+  height_svg = 6*0.618
+)                                                                     
+```
+
+::: callout-note
+## Interactivity
+
+Elements associated with a certain `data_id` will be highlighted when your cursor hovers over a data point with that `data_id`. In this example, this was achieved in addition to the tooltip aesthetic (that will display the `data_id`).
+:::
+
+## Onclick aesthetic
+
+`onclick` can be used to hyperlink to other websites on the Internet.
+
+```{r}
+exam_data$onclick <- sprintf("window.open(\"%s%s\")",
+"https://www.moe.gov.sg/schoolfinder?journey=Primary%20school",
+as.character(exam_data$ID))
+
+p <- ggplot(data=exam_data, 
+       aes(x = MATHS)) +
+  geom_dotplot_interactive(              
+    aes(onclick = onclick),              
+    stackgroups = TRUE,                  
+    binwidth = 1,                        
+    method = "histodot") +               
+  scale_y_continuous(NULL,               
+                     breaks = NULL)
+girafe(                                  
+  ggobj = p,                             
+  width_svg = 6,                         
+  height_svg = 6*0.618)                               
+```
+
+::: callout-important
+## Javascript instructions
+
+Note the additional column created in the dataset `exam_data` called `onclick` that specifies the javascript to open a window with the given URL. This is necessary to make `onclick` work!
+:::
+
+## Coordinating between two plots
+
+`patchwork` can be used with what we have learnt today as well! The two plots will show the data points with the same `data_id` upon cursor hover:
+
+```{r}
+p1 <- ggplot(data=exam_data, 
+       aes(x = MATHS)) +
+  geom_dotplot_interactive(              
+    aes(data_id = ID,
+        tooltip = ID),              
+    stackgroups = TRUE,                  
+    binwidth = 1,                        
+    method = "histodot") +  
+  coord_cartesian(xlim=c(0,100)) + 
+  scale_y_continuous(NULL,               
+                     breaks = NULL)
+
+p2 <- ggplot(data=exam_data, 
+       aes(x = ENGLISH)) +
+  geom_dotplot_interactive(              
+    aes(data_id = ID,
+        tooltip = ID),              
+    stackgroups = TRUE,                  
+    binwidth = 1,                        
+    method = "histodot") + 
+  coord_cartesian(xlim=c(0,100)) + 
+  scale_y_continuous(NULL,               
+                     breaks = NULL)
+
+girafe(code = print(p1 + p2), 
+       width_svg = 6,
+       height_svg = 3,
+       options = list(
+         opts_hover(css = "fill: #202020;"),
+         opts_hover_inv(css = "opacity:0.2;")
+         )
+       ) 
+```
+
+## Using plotly methods to achieve interactive data visualization
+
+There are two ways of doing this:
+
+-   `plot_ly()`
+
+-   `ggplotly()`
+
+::: panel-tabset
+#### plot_ly()
+
+```{r, echo = FALSE, message = FALSE}
+plot_ly(data = exam_data, 
+        x = ~ENGLISH, 
+        y = ~MATHS, 
+        color = ~RACE)
+```
+
+#### Code
+
+```{r, results = 'hide', fig.show = 'hide', message = FALSE}
+plot_ly(data = exam_data, 
+        x = ~ENGLISH, 
+        y = ~MATHS, 
+        color = ~RACE)
+```
+:::
+
+::: panel-tabset
+#### ggplotly()
+
+```{r, echo = FALSE, message = FALSE}
+p <- ggplot(data=exam_data, 
+            aes(x = MATHS,
+                y = ENGLISH,
+                color = RACE)) +
+  geom_point(size=1) +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100))
+ggplotly(p)
+```
+
+#### Code
+
+```{r, results = 'hide', fig.show = 'hide', message = FALSE}
+p <- ggplot(data=exam_data, 
+            aes(x = MATHS,
+                y = ENGLISH,
+                color = RACE)) +
+  geom_point(size=1) +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100))
+ggplotly(p)
+```
+:::
+
+You can achieve a coordinated linked plot using `highlight_key()` and `subplot()` to place the plots side by side.
+
+::: panel-tabset
+#### plot_ly()
+
+```{r, echo = FALSE, message = FALSE}
+plot_ly(data = exam_data, 
+        x = ~ENGLISH, 
+        y = ~MATHS, 
+        color = ~RACE)
+```
+
+#### Code
+
+```{r, results = 'hide', fig.show = 'hide', message = FALSE}
+plot_ly(data = exam_data, 
+        x = ~ENGLISH, 
+        y = ~MATHS, 
+        color = ~RACE)
+```
+:::
+
+::: panel-tabset
+#### Plot
+
+```{r, echo = FALSE, message = FALSE}
+d <- highlight_key(exam_data)
+p1 <- ggplot(data=d, 
+            aes(x = MATHS,
+                y = ENGLISH)) +
+  geom_point(size=1) +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100))
+
+p2 <- ggplot(data=d, 
+            aes(x = MATHS,
+                y = SCIENCE)) +
+  geom_point(size=1) +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100))
+subplot(ggplotly(p1),
+        ggplotly(p2))
+```
+
+#### Code
+
+```{r, results = 'hide', fig.show = 'hide', message = FALSE}
+d <- highlight_key(exam_data)
+p1 <- ggplot(data=d, 
+            aes(x = MATHS,
+                y = ENGLISH)) +
+  geom_point(size=1) +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100))
+
+p2 <- ggplot(data=d, 
+            aes(x = MATHS,
+                y = SCIENCE)) +
+  geom_point(size=1) +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100))
+subplot(ggplotly(p1),
+        ggplotly(p2))
+```
+:::
+
+## Using crosstalk methods
+
+Example of usage below:
+
+```{r, message = FALSE}
+d <- highlight_key(exam_data) 
+p <- ggplot(d, 
+            aes(ENGLISH, 
+                MATHS)) + 
+  geom_point(size=1) +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100))
+
+gg <- highlight(ggplotly(p),        
+                "plotly_selected")  
+
+crosstalk::bscols(gg,               
+                  DT::datatable(d), 
+                  widths = 5)        
+```
+
