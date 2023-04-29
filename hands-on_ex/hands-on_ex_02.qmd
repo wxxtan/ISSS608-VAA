@@ -4,6 +4,12 @@ sidebar: false
 pagetitle: "Hands-on Ex 02"
 ---
 
+::: callout-note
+## Disclaimer
+
+Hands-on exercises are for my own practice and are ungraded. Thus, the plots and write-ups may be unrefined and poorly labelled.
+:::
+
 ```{r, include = FALSE}
 pacman::p_load(ggrepel, patchwork, 
                ggthemes, hrbrthemes,

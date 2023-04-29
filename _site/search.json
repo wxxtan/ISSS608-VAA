@@ -4,7 +4,7 @@
     "href": "hands-on_ex/hands-on_ex_01.html",
     "title": "Week 1: Hands-on Exercise",
     "section": "",
-    "text": "Let’s explore the ggplot2 package in R!"
+    "text": "Disclaimer\n\n\n\nHands-on exercises are for my own practice and are ungraded. Thus, the plots and write-ups may be unrefined and poorly labelled.\nLet’s explore the ggplot2 package in R!"
   },
   {
     "objectID": "hands-on_ex/hands-on_ex_01.html#load-dataset",
@@ -39,14 +39,14 @@
     "href": "hands-on_ex/hands-on_ex_02.html",
     "title": "Week 2: Hands-on Exercise",
     "section": "",
-    "text": "exam_data &lt;- read_csv(\"data_02/Exam_data.csv\")\n\nRows: 322 Columns: 7\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (4): ID, CLASS, GENDER, RACE\ndbl (3): ENGLISH, MATHS, SCIENCE\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message."
+    "text": "Disclaimer\n\n\n\nHands-on exercises are for my own practice and are ungraded. Thus, the plots and write-ups may be unrefined and poorly labelled."
   },
   {
     "objectID": "hands-on_ex/hands-on_ex_02.html#load-dataset",
     "href": "hands-on_ex/hands-on_ex_02.html#load-dataset",
     "title": "Week 2: Hands-on Exercise",
-    "section": "",
-    "text": "exam_data &lt;- read_csv(\"data_02/Exam_data.csv\")\n\nRows: 322 Columns: 7\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (4): ID, CLASS, GENDER, RACE\ndbl (3): ENGLISH, MATHS, SCIENCE\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message."
+    "section": "Load dataset",
+    "text": "Load dataset\n\nexam_data &lt;- read_csv(\"data_02/Exam_data.csv\")\n\nRows: 322 Columns: 7\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (4): ID, CLASS, GENDER, RACE\ndbl (3): ENGLISH, MATHS, SCIENCE\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message."
   },
   {
     "objectID": "hands-on_ex/hands-on_ex_02.html#why-use-ggrepel",
@@ -88,14 +88,14 @@
     "href": "hands-on_ex/hands-on_ex_03.html",
     "title": "Week 3: Hands-on Exercise",
     "section": "",
-    "text": "exam_data &lt;- read_csv(\"data_03/Exam_data.csv\")\n\nRows: 322 Columns: 7\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (4): ID, CLASS, GENDER, RACE\ndbl (3): ENGLISH, MATHS, SCIENCE\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\n\n\nggiraph is a ggplot2 extension that can allow plots to become interactive. Three arguments are accepted:\n\nTooltip\nOnclick\nData_id\n\nIts usage will be demonstrated via the example code chunks below."
+    "text": "Disclaimer\n\n\n\nHands-on exercises are for my own practice and are ungraded. Thus, the plots and write-ups may be unrefined and poorly labelled."
   },
   {
     "objectID": "hands-on_ex/hands-on_ex_03.html#load-dataset",
     "href": "hands-on_ex/hands-on_ex_03.html#load-dataset",
     "title": "Week 3: Hands-on Exercise",
-    "section": "",
-    "text": "exam_data &lt;- read_csv(\"data_03/Exam_data.csv\")\n\nRows: 322 Columns: 7\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (4): ID, CLASS, GENDER, RACE\ndbl (3): ENGLISH, MATHS, SCIENCE\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\n\n\nggiraph is a ggplot2 extension that can allow plots to become interactive. Three arguments are accepted:\n\nTooltip\nOnclick\nData_id\n\nIts usage will be demonstrated via the example code chunks below."
+    "section": "Load dataset",
+    "text": "Load dataset\n\nexam_data &lt;- read_csv(\"data_03/Exam_data.csv\")\n\nRows: 322 Columns: 7\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (4): ID, CLASS, GENDER, RACE\ndbl (3): ENGLISH, MATHS, SCIENCE\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\n\n\nggiraph is a ggplot2 extension that can allow plots to become interactive. Three arguments are accepted:\n\nTooltip\nOnclick\nData_id\n\nIts usage will be demonstrated via the example code chunks below."
   },
   {
     "objectID": "hands-on_ex/hands-on_ex_03.html#tooltip-aesthetic",
@@ -138,6 +138,41 @@
     "title": "Week 3: Hands-on Exercise",
     "section": "Using crosstalk methods",
     "text": "Using crosstalk methods\nExample of usage below:\n\nd &lt;- highlight_key(exam_data) \np &lt;- ggplot(d, \n            aes(ENGLISH, \n                MATHS)) + \n  geom_point(size=1) +\n  coord_cartesian(xlim=c(0,100),\n                  ylim=c(0,100))\n\ngg &lt;- highlight(ggplotly(p),        \n                \"plotly_selected\")  \n\ncrosstalk::bscols(gg,               \n                  DT::datatable(d), \n                  widths = 5)"
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html#basics-of-animation-using-gganimate",
+    "href": "hands-on_ex/hands-on_ex_03.html#basics-of-animation-using-gganimate",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "Basics of animation using gganimate",
+    "text": "Basics of animation using gganimate\nSome terminology associated with animated plots:\n\nFrame: In an animated line graph, each frame represents a different point in time or a different category. When the frame changes, the data points on the graph are updated to reflect the new data.\nAnimation Attributes: The animation attributes are the settings that control how the animation behaves. For example, you can specify the duration of each frame, the easing function used to transition between frames, and whether to start the animation from the current frame or from the beginning."
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html#importing-data",
+    "href": "hands-on_ex/hands-on_ex_03.html#importing-data",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "Importing data",
+    "text": "Importing data\n\ncol &lt;- c(\"Country\", \"Continent\")\nglobalPop &lt;- read_xls(\"data_03/GlobalPopulation.xls\",\n                      sheet=\"Data\") %&gt;%\n  mutate_each_(funs(factor(.)), col) %&gt;%\n  mutate(Year = as.integer(Year))\n\nFirst, we create a static bubble plot using our data:\n\nPlotCode\n\n\n\n\n\n\n\n\n\n\nggplot(globalPop, aes(x = Old, y = Young, \n                      size = Population, \n                      colour = Country)) +\n  geom_point(alpha = 0.7, \n             show.legend = FALSE) +\n  scale_colour_manual(values = country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(title = 'Year: {frame_time}', \n       x = '% Aged', \n       y = '% Young') \n\n\n\n\nThen, we add transition_time() and ease_aes() to create the animations:\n\nPlotCode\n\n\n\n\n\n\n\n\n\n\nggplot(globalPop, aes(x = Old, y = Young, \n                      size = Population, \n                      colour = Country)) +\n  geom_point(alpha = 0.7, \n             show.legend = FALSE) +\n  scale_colour_manual(values = country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(title = 'Year: {frame_time}', \n       x = '% Aged', \n       y = '% Young') +\n  transition_time(Year) +       \n  ease_aes('linear')"
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html#basics-of-animation-using-ggplotly",
+    "href": "hands-on_ex/hands-on_ex_03.html#basics-of-animation-using-ggplotly",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "Basics of animation using ggplotly()",
+    "text": "Basics of animation using ggplotly()\nThis is done using the frame argument within the aesthetics (not executed to save render time).\nExample code:\n```{r}\ngg &lt;- ggplot(globalPop, \n       aes(x = Old, \n           y = Young, \n           size = Population, \n           colour = Country)) +\n  geom_point(aes(size = Population,\n                 frame = Year),\n             alpha = 0.7, \n             show.legend = FALSE) +\n  scale_colour_manual(values = country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(x = '% Aged', \n       y = '% Young')\n\nggplotly(gg)\n```\n\n\n\n\n\n\n`frame =` argument\n\n\n\nNote the frame = argument within the geom_point’s aesthetics, specifying that the animation should be done across Year."
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_03.html#basics-of-animation-using-plot_ly",
+    "href": "hands-on_ex/hands-on_ex_03.html#basics-of-animation-using-plot_ly",
+    "title": "Week 3: Hands-on Exercise",
+    "section": "Basics of animation using plot_ly()",
+    "text": "Basics of animation using plot_ly()\nThis is also done using the frame argument (not executed to save render time):\n```{r}\nbp &lt;- globalPop %&gt;%\n  plot_ly(x = ~Old, \n          y = ~Young, \n          size = ~Population, \n          color = ~Continent, \n          frame = ~Year, \n          text = ~Country, \n          hoverinfo = \"text\",\n          type = 'scatter',\n          mode = 'markers'\n          )\nbp\n```"
+  },
+  {
+    "objectID": "hands-on_ex/hands-on_ex_template.html",
+    "href": "hands-on_ex/hands-on_ex_template.html",
+    "title": "Week X: Hands-on Exercise",
+    "section": "",
+    "text": "Disclaimer\n\n\n\nHands-on exercises are for my own practice and are ungraded. Thus, the plots and write-ups may be unrefined and poorly labelled."
   },
   {
     "objectID": "in-class_ex/in-class_ex_01.html",

@@ -1,0 +1,9 @@
+---
+title: "Week 3: In-class Exercise"
+sidebar: false
+pagetitle: "In-class Ex 03"
+---
+
+## More Tableau dashboarding
+
+You may access it [here](https://public.tableau.com/app/profile/wilson.tan3320/viz/In-classExercise03/Dashboard1).
