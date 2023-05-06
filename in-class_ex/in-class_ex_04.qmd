@@ -1,0 +1,72 @@
+---
+title: "Week 4: In-class Exercise"
+sidebar: false
+pagetitle: "In-class Ex 04"
+---
+
+## Load packages and dataset
+
+```{r}
+pacman::p_load(rstatix, gt, patchwork, tidyverse, webshot2, png)
+```
+
+```{r}
+exam_data <- read_csv("data/data_04/Exam_data.csv", show_col_types = FALSE)
+```
+
+## Quantile-Quantile (Q-Q) Plot
+
+Q-Q plots are used to check for normality of data. The points should fit close to the straight line if the variable in question is indeed normally distributed.
+
+In this case, we are checking if 'English' scores are normally distributed:
+
+::: panel-tabset
+## Plot
+```{r, echo = FALSE, message = FALSE, fig.height = 6, fig.width = 8}
+ggplot(exam_data,
+       aes(sample = ENGLISH)) +
+  stat_qq() +
+  stat_qq_line()
+```
+## Code
+```{r, eval = FALSE}
+ggplot(exam_data,
+       aes(sample = ENGLISH)) +
+  stat_qq() +
+  stat_qq_line()
+```
+:::
+
+::: panel-tabset
+## Plot
+```{r, echo = FALSE, message = FALSE, fig.height = 9, fig.width = 11}
+qq <- ggplot(exam_data,
+             aes(sample = ENGLISH)) +
+  stat_qq() +
+  stat_qq_line()
+
+sw_t <- exam_data %>% shapiro_test(ENGLISH) %>% gt()
+
+tmp <- tempfile(fileext = ".png")
+gtsave(sw_t, tmp)
+table_png <- png::readPNG(tmp, native = TRUE)
+
+qq + table_png + plot_layout(widths = c(8,3), heights = c(6,3))
+```
+## Code
+```{r, eval = FALSE}
+qq <- ggplot(exam_data,
+             aes(sample = ENGLISH)) +
+  stat_qq() +
+  stat_qq_line()
+
+sw_t <- exam_data %>% shapiro_test(ENGLISH) %>% gt()
+
+tmp <- tempfile(fileext = ".png")
+gtsave(sw_t, tmp)
+table_png <- png::readPNG(tmp, native = TRUE)
+
+qq + table_png
+```
+:::
+

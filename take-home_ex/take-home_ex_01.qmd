@@ -1,4 +1,19 @@
 ---
 title: "Week 1: Take-home Exercise"
 sidebar: false
+pagetitle: "Take-home Ex 01"
 ---
+
+```{r, include = FALSE}
+pacman::p_load(tidyverse, dplyr, gganimate, ggiraph, ggplot2, crosstalk, ggrepel, ggthemes, lubridate)
+```
+
+## Load datasets
+
+```{r}
+fin_data <- read_csv("data/FinancialJournal.csv",
+                     col_types = c("i", "T", "f", "d"))
+fin_data$category <- fin_data$category %>% as.factor()
+```
+
+

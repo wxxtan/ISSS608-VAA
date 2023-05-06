@@ -168,6 +168,13 @@
     "text": "Basics of animation using plot_ly()\nThis is also done using the frame argument (not executed to save render time):\n```{r}\nbp &lt;- globalPop %&gt;%\n  plot_ly(x = ~Old, \n          y = ~Young, \n          size = ~Population, \n          color = ~Continent, \n          frame = ~Year, \n          text = ~Country, \n          hoverinfo = \"text\",\n          type = 'scatter',\n          mode = 'markers'\n          )\nbp\n```"
   },
   {
+    "objectID": "hands-on_ex/hands-on_ex_04.html",
+    "href": "hands-on_ex/hands-on_ex_04.html",
+    "title": "Week 4: Hands-on Exercise",
+    "section": "",
+    "text": "Disclaimer\n\n\n\nHands-on exercises are for my own practice and are ungraded. Thus, the plots and write-ups may be unrefined and poorly labelled."
+  },
+  {
     "objectID": "hands-on_ex/hands-on_ex_template.html",
     "href": "hands-on_ex/hands-on_ex_template.html",
     "title": "Week X: Hands-on Exercise",
@@ -217,6 +224,27 @@
     "text": "You may access it here."
   },
   {
+    "objectID": "in-class_ex/in-class_ex_04.html",
+    "href": "in-class_ex/in-class_ex_04.html",
+    "title": "Week 4: In-class Exercise",
+    "section": "",
+    "text": "pacman::p_load(rstatix, gt, patchwork, tidyverse, webshot2, png)\n\n\nexam_data &lt;- read_csv(\"data/data_04/Exam_data.csv\", show_col_types = FALSE)"
+  },
+  {
+    "objectID": "in-class_ex/in-class_ex_04.html#load-packages-and-dataset",
+    "href": "in-class_ex/in-class_ex_04.html#load-packages-and-dataset",
+    "title": "Week 4: In-class Exercise",
+    "section": "",
+    "text": "pacman::p_load(rstatix, gt, patchwork, tidyverse, webshot2, png)\n\n\nexam_data &lt;- read_csv(\"data/data_04/Exam_data.csv\", show_col_types = FALSE)"
+  },
+  {
+    "objectID": "in-class_ex/in-class_ex_04.html#quantile-quantile-q-q-plot",
+    "href": "in-class_ex/in-class_ex_04.html#quantile-quantile-q-q-plot",
+    "title": "Week 4: In-class Exercise",
+    "section": "Quantile-Quantile (Q-Q) Plot",
+    "text": "Quantile-Quantile (Q-Q) Plot\nQ-Q plots are used to check for normality of data. The points should fit close to the straight line if the variable in question is indeed normally distributed.\nIn this case, we are checking if ‘English’ scores are normally distributed:\n\nPlotCode\n\n\n\n\n\n\n\n\n\n\nggplot(exam_data,\n       aes(sample = ENGLISH)) +\n  stat_qq() +\n  stat_qq_line()\n\n\n\n\n\nPlotCode\n\n\n\n\n\n\n\n\n\n\nqq &lt;- ggplot(exam_data,\n             aes(sample = ENGLISH)) +\n  stat_qq() +\n  stat_qq_line()\n\nsw_t &lt;- exam_data %&gt;% shapiro_test(ENGLISH) %&gt;% gt()\n\ntmp &lt;- tempfile(fileext = \".png\")\ngtsave(sw_t, tmp)\ntable_png &lt;- png::readPNG(tmp, native = TRUE)\n\nqq + table_png"
+  },
+  {
     "objectID": "index.html",
     "href": "index.html",
     "title": "About Me",
@@ -236,5 +264,19 @@
     "title": "About Me",
     "section": "Experience",
     "text": "Experience\nHousing & Development Board | Senior Business Analyst | Sep 2018 - present"
+  },
+  {
+    "objectID": "take-home_ex/take-home_ex_01.html",
+    "href": "take-home_ex/take-home_ex_01.html",
+    "title": "Week 1: Take-home Exercise",
+    "section": "",
+    "text": "fin_data &lt;- read_csv(\"data/FinancialJournal.csv\",\n                     col_types = c(\"i\", \"T\", \"f\", \"d\"))\nfin_data$category &lt;- fin_data$category %&gt;% as.factor()"
+  },
+  {
+    "objectID": "take-home_ex/take-home_ex_01.html#load-datasets",
+    "href": "take-home_ex/take-home_ex_01.html#load-datasets",
+    "title": "Week 1: Take-home Exercise",
+    "section": "",
+    "text": "fin_data &lt;- read_csv(\"data/FinancialJournal.csv\",\n                     col_types = c(\"i\", \"T\", \"f\", \"d\"))\nfin_data$category &lt;- fin_data$category %&gt;% as.factor()"
   }
 ]
