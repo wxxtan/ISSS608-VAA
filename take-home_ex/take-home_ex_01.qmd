@@ -5,7 +5,7 @@ pagetitle: "Take-home Ex 01"
 ---
 
 ```{r, include = FALSE}
-pacman::p_load(tidyverse, dplyr, gganimate, ggiraph, ggplot2, crosstalk, ggrepel, ggthemes, lubridate, ggdist, ggridges, colorspace, ggstatsplot, ungeviz, plotly, DT, FunnelPlotR, knitr, scales, forecast, ggfortify)
+pacman::p_load(tidyverse, dplyr, gganimate, ggiraph, ggplot2, crosstalk, ggrepel, ggthemes, lubridate, ggdist, ggridges, colorspace, ggstatsplot, ungeviz, plotly, DT, FunnelPlotR, knitr, scales, forecast, ggfortify, performance)
 ```
 
 ## Background
@@ -19,6 +19,40 @@ There are two datasets for this exercise:
 -   The first one contains various demographic information of survey participants (*Participants.csv*)
 
 -   The second contains various financial transactions of survey participants (*FinancialJournal.csv*)
+
+::: {.callout-note collapse="true"}
+## Data description (click to view)
+
+*Participants.csv*
+
+Contains information about the residents of City of Engagement that have agreed to participate in this study.
+
+-   participantId (integer): unique ID assigned to each participant.
+
+-   householdSize (integer): the number of people in the participant's household
+
+-   haveKids (boolean): whether there are children living in the participant's household.
+
+-   age (integer): participant's age in years at the start of the study.
+
+-   educationLevel (string factor): the participant's education level, one of: {"Low", "HighSchoolOrCollege", "Bachelors", "Graduate"}
+
+-   interestGroup (char): a char representing the participant's stated primary interest group, one of {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}. Note: specific topics of interest have been redacted to avoid bias.
+
+-   joviality (float): a value ranging from \[0,1\] indicating the participant's overall happiness level at the start of the study.
+
+*FinancialJournal.csv*
+
+Contains information about financial transactions.
+
+-   participantId (integer): unique ID corresponding to the participant affected
+
+-   timestamp (datetime): the time when the check-in was logged
+
+-   category (string factor): a string describing the expense category, one of {"Education", "Food", "Recreation", "RentAdjustment", "Shelter", "Wage"}
+
+-   amount (double): the amount of the transaction
+:::
 
 While importing the datasets, we will also ensure that the variables are of the correct type (e.g. character, numeric, integer):
 
@@ -272,7 +306,7 @@ ggplot(interest_counts, aes(x = reorder(interestGroup, -Counts), y = Counts)) +
 ```
 :::
 
-## More Data Preparation - Group Data
+## Getting to Know Our Financial Journal Dataset
 
 Let's take a look at the length (no. of rows) of our `new_fin_data`, which is the financial journal for our `r nrow(new_p_data)` participants:
 
@@ -294,6 +328,7 @@ grouped_data <-
 ```{r}
 head(grouped_data, 10)
 ```
+
 With this grouped dataset, we can clearly see the expenditure/income for each participant, category, and month-year.
 
 ```{r}
@@ -302,16 +337,658 @@ cat("Output:", "There are", nrow(grouped_data), "rows", "in our new dataset.", "
 
 This is a much smaller dataset, which is more manageable, while still providing insights at the monthly interval.
 
-```{r}
-grouped_more_data <-
-  group_by(grouped_data, category, month_year) %>%
-  reframe(total_amount = sum(total_amount)) %>%
-  arrange(month_year)
+Let's explore the Financial Journal data over time to see if there are any trends. We will do this by plotting the mean, maximum, and minimum `total_amount` earned/spent from all participants, grouped by `category` and `month_year`, over `month_year`.
 
-ggplot(data = grouped_more_data, aes(x = month_year, y = total_amount)) +
-  geom_line(color = "steelblue") +
-  facet_wrap(~category, scales = "free_y", nrow = 3, ncol = 2) +
-  labs(x = "Month-Year", y = "Total Amount") +
-  theme_bw()
+```{r, message = FALSE}
+#| code-fold: true
+#| code-summary: "Code"
+
+# Calculate the mean, minimum, and maximum total_amount over all participantId for each category
+grouped_data_summary <- grouped_data %>%
+  group_by(category, month_year) %>%
+  summarise(mean_total_amount = mean(abs(total_amount)),
+            min_total_amount = min(abs(total_amount)),
+            max_total_amount = max(abs(total_amount)))
+
+# Create a time series plot with mean, min, and max for each category using facets
+ggplot(grouped_data_summary, aes(x = month_year, y = mean_total_amount, color = category)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = min_total_amount, ymax = max_total_amount, fill = category), alpha = 0.3) +
+  labs(x = "Month/Year", y = "Amount ($)",
+       title = "Mean/Max/Min Amount by Category over Time",
+       subtitle = "RentAdjustment and Wage are earnings, the rest are expenses") +
+  scale_fill_discrete(name = "Category") +
+  scale_color_discrete(name = "Category") +
+  theme_bw() +
+  facet_wrap(~category, nrow = 3, scales = "free_y") +
+  guides(color = "none", fill = "none") +
+  scale_x_datetime(date_minor_breaks = "1 month", date_labels = "%b-%Y")
 ```
 
+We can see that the mean, minimum, and maximum amounts for each category is relatively stable over time. The exceptions are:
+
+-   `Shelter` and `RentAdjustment` experience 'shocks' on Mar-2022, and the effects linger for a month until Apr-2022, after which `Shelter` stabilises while `RentAdjustment` becomes zero.
+
+-   Minor 'shock' for `Wage` on Mar-2022 as well.
+
+-   High volatility for the maximum amount spent on `Recreation` over time. This makes sense as it is most likely spending on luxury items, as compared to the other expense categories, which are more like necessities (e.g., `Education`, `Food`, `Shelter`).
+
+Since most of the time series are relatively stable, we can move on to conduct our analysis on aggregated data (aggregated over time). This removes one dimension from the analysis, making it less complicated.
+
+## Aggregating Financial Journal Data over Time and Merging Datasets
+
+We will take the mean of `total_amount` over `month_year` to obtain mean monthly amounts earned/spent by each participant for each category. We will not include `RentAdjustment` as it seems like a one-off occurrence.
+
+```{r, message = FALSE}
+aggregated_data <- grouped_data %>%
+  group_by(participantId, category) %>%
+  summarise(monthly_total_amount = mean(total_amount))
+head(aggregated_data)
+```
+
+Let's merge this aggregated data with the demographics dataset so that we can see the earnings/expense by demographics:
+
+```{r}
+merged_data <- inner_join(aggregated_data, new_p_data, by = "participantId")
+head(merged_data)
+```
+
+## Who Spends Most on Education?
+
+Intuitively, households with children should spend the most on education. In this section, we will see from the data whether this is really the case.
+
+The following plots show the monthly amount spent on Education when grouped by the respective variables:
+
+::: panel-tabset
+## Household Size
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+#| results: "hold"
+
+tmp <- merged_data %>%
+  filter(category == "Education") %>%
+  group_by(householdSize) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+tmp
+cat("\n", "Only those with householdSize = 3 spend on education, which makes sense since kids are present in households of size 3.", "\n")
+```
+
+## Kids?
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+#| results: "hold"
+
+tmp <- merged_data %>%
+  filter(category == "Education") %>%
+  group_by(haveKids) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+tmp
+cat("\n", "Only those who have kids will spend on education", "\n")
+```
+
+## Education Level
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Education") %>%
+  group_by(educationLevel) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = educationLevel, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Education by Education Level",
+       subtitle = "Graduates spend the most on education.",
+       x = "\nEducation Level",
+       y = "Average Monthly Amount\nSpent on Education ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+:::
+
+Conclusions:
+
+-   Confirmed that only households with kids spend on education.
+
+-   Graduates spend the most on education, though not by far.
+
+## Who Spends Most on Food?
+
+The following plots show the monthly amount spent on Food when grouped by the respective variables:
+
+::: panel-tabset
+## Household Size
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Food") %>%
+  group_by(householdSize) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = householdSize, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Food by Household Size",
+       subtitle = "Surprisingly, Household Size and Amount Spent on Food are not positively correlated",
+       x = "\nHousehold Size",
+       y = "Average Monthly Amount\nSpent on Food ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 11.5))
+```
+
+## Kids?
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Food") %>%
+  group_by(haveKids) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = haveKids, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Food by Presence of Kids",
+       subtitle = "Presence of kids does not affect amount spent on food",
+       x = "\nParticipants have kids?",
+       y = "Average Monthly Amount\nSpent on Food ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Age
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+merged_data$ageGroup <- cut(merged_data$age,
+                            breaks = c(0, 29, 39, 49, Inf),
+                            labels = c("18-29", "30-39", "40-49", "50-60"))
+
+tmp <- merged_data %>%
+  filter(category == "Food") %>%
+  group_by(ageGroup) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = ageGroup, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Food by Age Group",
+       subtitle = "Age does not seem to affect amount spent on food.",
+       x = "\nAge Group",
+       y = "Average Monthly Amount\nSpent on Food ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Education Level
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Food") %>%
+  group_by(educationLevel) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = educationLevel, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Food by Education Level",
+       subtitle = "Slight positive correlation between education level and amount spent on food.",
+       x = "\nEducation Level",
+       y = "Average Monthly Amount\nSpent on Food ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Education Level
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Food") %>%
+  group_by(educationLevel) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = educationLevel, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Food by Education Level",
+       subtitle = "Slight positive correlation between education level and amount spent on food.",
+       x = "\nEducation Level",
+       y = "Average Monthly Amount\nSpent on Food ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+:::
+
+Conclusions:
+
+-   `householdSize` and `haveKids` do not appear to affect how much is spent monthly on food, which is quite puzzling. Could it be the case that household members eat less to accommodate a larger family?
+
+-   `educationLevel` shows a slight positive correlation with amount spent monthly on food (based on the plot). However, a caveat is that `educationLevel` may also be positively correlated with wage. This will be explored further later on.
+
+## Who Spends Most on Recreation?
+
+The following plots show the monthly amount spent on Recreation when grouped by the respective variables:
+
+::: panel-tabset
+## Household Size
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Recreation") %>%
+  group_by(householdSize) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = householdSize, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Recreation by Household Size",
+       subtitle = "Slight increase in spending on recreation when household size increases",
+       x = "\nHousehold Size",
+       y = "Average Monthly Amount\nSpent on Recreation ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Kids?
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Recreation") %>%
+  group_by(haveKids) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = haveKids, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Recreation by Presence of Kids",
+       subtitle = "Slight increase in spending on recreation when participants have kids.",
+       x = "\nParticipants have kids?",
+       y = "Average Monthly Amount\nSpent on Recreation ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Age
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Recreation") %>%
+  group_by(ageGroup) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = ageGroup, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Recreation by Age Group",
+       subtitle = "Roughly equal spending on recreation across age groups.",
+       x = "\nAge Group",
+       y = "Average Monthly Amount\nSpent on Recreation ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Education Level
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Recreation") %>%
+  group_by(educationLevel) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = educationLevel, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Recreation by Education Level",
+       subtitle = "Roughly equal spending on recreation across education levels.",
+       x = "\nEducation Level",
+       y = "Average Monthly Amount\nSpent on Recreation ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Interest Group
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Recreation") %>%
+  group_by(interestGroup) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = reorder(interestGroup, -abs(average_monthly_amount)), y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Recreation by Interest Group",
+       subtitle = "Slight differences in spending on recreation across interest groups.\nCould some interest groups be more expensive than the others?",
+       x = "\nInterest Group",
+       y = "Average Monthly Amount\nSpent on Recreation ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+:::
+
+Conclusions:
+
+-   Slight increases in spending on recreation when `householdSize` increases and when `haveKids` is true.
+
+-   Some interest groups may cost more than the others. However, it is difficult to ascertain, based on the data, whether spending on recreation equates to spending on interest groups.
+
+## Who Spends Most on Shelter?
+
+The following plots show the monthly amount spent on Shelter when grouped by the respective variables:
+
+::: panel-tabset
+## Household Size
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Shelter") %>%
+  group_by(householdSize) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = householdSize, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Shelter by Household Size",
+       subtitle = "Larger households spend a lot more on shelter as compared to singles.",
+       x = "\nHousehold Size",
+       y = "Average Monthly Amount\nSpent on Shelter ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Kids?
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Shelter") %>%
+  group_by(haveKids) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = haveKids, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Shelter by Presence of Kids",
+       subtitle = "Participants who have kids spend more on shelter.",
+       x = "\nParticipants have kids?",
+       y = "Average Monthly Amount\nSpent on Shelter ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Age
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Shelter") %>%
+  group_by(ageGroup) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = ageGroup, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Shelter by Age Group",
+       subtitle = "Roughly equal spending on shelter across age groups.",
+       x = "\nAge Group",
+       y = "Average Monthly Amount\nSpent on Shelter ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Education Level
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Shelter") %>%
+  group_by(educationLevel) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = educationLevel, y = abs(average_monthly_amount))) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Amount Spent on Shelter by Education Level",
+       subtitle = "Spending on shelter increases as education level increases.",
+       x = "\nEducation Level",
+       y = "Average Monthly Amount\nSpent on Shelter ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+:::
+
+Conclusions:
+
+-   Both `householdSize > 1` and `haveKids = TRUE` lead to an observed increase in spending on shelter. This makes sense, as a larger household requires more living space.
+
+-   `educationLevel` shows a positive correlation with amount spent monthly on shelter (based on the plot, similar to the case for food). However, a caveat is that `educationLevel` may also be positively correlated with wage. This will be explored further later on.
+
+## Who Earns Most?
+
+Based on our previous plots for spending on food and shelter across education levels, there are slight observed positive correlations. However, we cannot be sure if wages earned is also correlated. If that is the case, then we cannot attribute the correlation with certainty to either variable.
+
+In this section, we will explore which demographics earn the most in terms of wages.
+
+::: panel-tabset
+## Household Size
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Wage") %>%
+  group_by(householdSize) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = householdSize, y = average_monthly_amount)) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Wages by Household Size",
+       subtitle = "Participants with larger households earn more in wages.",
+       x = "\nHousehold Size",
+       y = "Average Monthly Wages ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Kids?
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Wage") %>%
+  group_by(haveKids) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = haveKids, y = average_monthly_amount)) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Wages by Presence of Kids",
+       subtitle = "Participants with kids earn more in wages.",
+       x = "\nParticipants have kids?",
+       y = "Average Monthly Wages ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Age
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Wage") %>%
+  group_by(ageGroup) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = ageGroup, y = average_monthly_amount)) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Wages by Age Group",
+       subtitle = "Wages do not increase with age.",
+       x = "\nAge Group",
+       y = "Average Monthly Wages ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+
+## Education Level
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+tmp <- merged_data %>%
+  filter(category == "Wage") %>%
+  group_by(educationLevel) %>%
+  summarise(average_monthly_amount = mean(monthly_total_amount))
+
+ggplot(tmp, aes(x = educationLevel, y = average_monthly_amount)) +
+  geom_bar(stat = "identity", fill = "#80b1d3") +
+  labs(title = "Average Monthly Wages by Education Level",
+       subtitle = "Wages increase as education level increases.",
+       x = "\nEducation Level",
+       y = "Average Monthly Wages ($)\n") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12))
+```
+:::
+
+Conclusions:
+
+-   Participants earn more in wages when `householdSize` increases and when they have kids. Could it be that they work harder when they have a family?
+
+-   Wages do not increase when participants' age increases. This is rather surprising and seems to suggest that jobs in this city (perhaps due to their agricultural nature) do not come with increments over time, and that having more experience does not command higher wages.
+
+-   Wages increase as education level of participants increases.
+
+## Increased Spending on Food and Shelter: Due to Wage or Education?
+
+We noted earlier that education level was positively correlated with spending on food and shelter. But education level is also positively correlated with wages.
+
+To have better clarity on the relationship between the four variables, we will perform two multiple linear regressions. We will skip the usual checks for a linear regression model as we just want to obtain some quick insights.
+
+```{r}
+# Prepare the variables and merge into a dataframe
+wage <- merged_data %>%
+  filter(category == "Wage") %>%
+  select(participantId, monthly_wage = monthly_total_amount)
+food <- merged_data %>%
+  filter(category == "Food") %>%
+  select(participantId, monthly_food = monthly_total_amount)
+shelter <- merged_data %>%
+  filter(category == "Shelter") %>%
+  select(participantId, monthly_shelter = monthly_total_amount)
+education <- merged_data %>%
+  select(participantId, educationLevel) %>%
+  distinct()
+lm_df <- inner_join(wage, food, by = "participantId") %>%
+  inner_join(shelter, by = "participantId") %>%
+  inner_join(education, by = "participantId")
+```
+
+::: panel-tabset
+## Food \~ Wage + educationLevel
+
+```{r}
+model <- lm(monthly_food ~ monthly_wage + educationLevel,
+            data = lm_df)
+summary(model)
+```
+
+## Shelter \~ Wage + educationLevel
+
+```{r}
+model <- lm(monthly_shelter ~ monthly_wage + educationLevel,
+            data = lm_df)
+summary(model)
+```
+:::
+
+Based on the output of the models, while the coefficients on `monthly_wage` and `educationLevel` are statistically significant at the 5% level (indicated by at least a \* next to the p-values), the multiple R-squared is very low, at less than 10% for both models. This means that less than 10% of the variance in `monthly_food` and `monthly_shelter` are explained by the regression models. There are likely to be some omitted variables that, when included, would help explain the variance in the dependent variables better.
+
+On the other hand, when a linear regression of `monthly_wage` on `educationLevel` is performed:
+
+```{r}
+model <- lm(monthly_wage ~ educationLevel,
+            data = lm_df)
+summary(model)
+```
+
+A single explanatory variable in this model already achieved an adjusted R-squared of 30.5%. This implies that 30.5% of the variation in monthly wage is explained by variations in education level.
+
+However, the model does fail the usual checks, such as this one for normality of residuals:
+
+```{r}
+check_normality(model) %>% plot()
+```
+
+This is likely because of the fact that we are using a discrete explanatory variable, `educationLevel`, with only 4 levels. Hence, the results of these linear regression models should be taken with a pinch of salt.
+
+## Does Higher Wage Equate More Happiness?
+
+There is still one more variable that we have yet to explore - `joviality` in the demographics dataset.
+
+Lastly, we will check whether higher wages lead to more happiness.
+
+```{r}
+joviality <- merged_data %>%
+  select("participantId", "joviality") %>%
+  distinct()
+lm_df <- inner_join(wage, joviality, by = "participantId")
+
+model <- lm(joviality ~ monthly_wage,
+            data = lm_df)
+summary(model)
+```
+
+It is interesting to note that the sign on the coefficient of `monthly_wage` is negative, and that it is statistically significant. This implies that an increase in `monthly_wage` is associated with a decrease in `joviality`. Participants who earned higher wages are associated with lower levels of happiness!
