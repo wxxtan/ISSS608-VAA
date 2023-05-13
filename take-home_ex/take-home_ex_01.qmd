@@ -5,13 +5,14 @@ pagetitle: "Take-home Ex 01"
 ---
 
 ```{r, include = FALSE}
-pacman::p_load(tidyverse, dplyr, gganimate, ggiraph, ggplot2, crosstalk, ggrepel, ggthemes, lubridate, ggdist, ggridges, colorspace, ggstatsplot, ungeviz, plotly, DT, FunnelPlotR, knitr, scales)
+pacman::p_load(tidyverse, dplyr, gganimate, ggiraph, ggplot2, crosstalk, ggrepel, ggthemes, lubridate, ggdist, ggridges, colorspace, ggstatsplot, ungeviz, plotly, DT, FunnelPlotR, knitr, scales, forecast, ggfortify)
 ```
+
 ## Background
 
 The City of Engagement, with a total population of 50,000, is a small city located in the Country of Nowhere. The city serves as a service centre of an agriculture region surrounding the city. The main agriculture of the region is fruit farms and vineyards. The local council of the city is in the process of preparing the Local Plan 2023. A sample survey of 1000 representative residents had been conducted to collect data related to their household demographic and spending patterns, among other things. The city aims to use the data to assist with their major community revitalization efforts, including how to allocate a very large city renewal grant they have recently received.
 
-## Load Datasets
+## Data Preparation
 
 There are two datasets for this exercise:
 
@@ -21,9 +22,17 @@ There are two datasets for this exercise:
 
 While importing the datasets, we will also ensure that the variables are of the correct type (e.g. character, numeric, integer):
 
+### Load datasets
+
 ```{r}
+#| results: hold
 p <- read_csv("data/Participants.csv",
                      col_types = cols("i", "i", "l", "i", "c", "c", "d"))
+if (any(is.na(p)) == FALSE) {
+  cat("Output:", "There are no missing values in Participants.csv", "\n")
+} else {
+  cat("Output:", "There are missing values in Participants.csv", "\n")
+}
 p$educationLevel <-
   p$educationLevel %>% ordered(levels =
                                  c("Low",
@@ -34,6 +43,11 @@ p_data <- distinct(p) # remove any possible duplicate rows
 
 fin <- read_csv("data/FinancialJournal.csv",
                      col_types = cols("i", "T", "c", "d"))
+if (any(is.na(fin)) == FALSE) {
+  cat("Output:", "There are no missing values in FinancialJournal.csv", "\n")
+} else {
+  cat("Output:", "There are missing values in FinancialJournal.csv", "\n")
+}
 fin$category <-
   fin$category %>% factor(levels =
                             c("Education",
@@ -92,26 +106,20 @@ new_p_data <- counts %>%
   select(!contains("n_obs"))
 ```
 
-And now, we will merge this new financial journal dataset with the demographics dataset for analysis later:
-
-```{r}
-merged_data <- inner_join(p_data, new_fin_data, by = "participantId")
-```
-
 ::: callout-note
 ## Participants removed due to low number of check-ins in financial journal
 
 A total of `r nrow(p_data) - nrow(new_p_data)` participants, out of the original `r nrow(p_data)`, were dropped from our datasets.
-
 :::
 
-## Getting to Know Our Data
+## Getting to Know Our Demographics Dataset
 
 The City of Engagement has a population of 50,000. We have participants' data with a sample size of `r nrow(new_p_data)`, which should give us a decent representation of how the population looks like.
 
-Firstly, let's perform some basic visualisations so that we can get to know our data better.
+Firstly, let's perform some basic visualisations so that we can get to know our data better. Basic insights are provided in the subtitle of each plot.
 
 ### Demographics of Participants
+
 ::: panel-tabset
 ## Household Size
 
@@ -120,7 +128,7 @@ Firstly, let's perform some basic visualisations so that we can get to know our 
 #| code-summary: "Code"
 
 # Creating a data.frame containing the frequencies of householdSize in our dataset of 1,000 participants
-hs_counts <- data.frame(table(p_data$householdSize))
+hs_counts <- data.frame(table(new_p_data$householdSize))
 colnames(hs_counts) <- c("householdSize", "Freq")
 
 # Adding a percentage variable based on the frequencies
@@ -135,7 +143,7 @@ ggplot(hs_counts, aes(x = "", y = Freq, fill = factor(householdSize))) +
   geom_text(aes(label = pct), position = position_stack(vjust = 0.5)) +
   coord_polar("y", start = 0) +
   labs(title = "Household Size Distribution",
-       subtitle = "The most common household size is 2, but the distribution is rather equal.",
+       subtitle = "The most common household size is 1 and least common household size is 3.",
        fill = "Household Size") +
   theme_void() +
   scale_fill_manual(values = nice_colors, guide = guide_legend(reverse = TRUE)) +
@@ -150,7 +158,7 @@ ggplot(hs_counts, aes(x = "", y = Freq, fill = factor(householdSize))) +
 #| code-summary: "Code"
 
 # Creating a data.frame containing the frequencies of haveKids in our dataset of 1,000 participants
-kids_counts <- data.frame(table(p_data$haveKids))
+kids_counts <- data.frame(table(new_p_data$haveKids))
 colnames(kids_counts) <- c("haveKids", "Freq")
 
 # Adding a percentage variable based on the frequencies
@@ -180,15 +188,15 @@ ggplot(kids_counts, aes(x = "", y = Freq, fill = factor(haveKids))) +
 #| code-summary: "Code"
 
 # Calculate the mean, min, and max age
-mean_age <- mean(p_data$age)
-min_age <- min(p_data$age)
-max_age <- max(p_data$age)
+mean_age <- mean(new_p_data$age)
+min_age <- min(new_p_data$age)
+max_age <- max(new_p_data$age)
 
 # Choosing some nice colors for the plot
 nice_colors <- c("#80b1d3", "#8dd3c7", "#bebada", "#fccde5")
 
 # Plotting
-ggplot(p_data, aes(x = age)) + 
+ggplot(new_p_data, aes(x = age)) + 
   geom_histogram(breaks = c(18, 30, 40, 50, 60), fill = nice_colors, color = "white") +
   labs(title = "Age Distribution",
        subtitle = "Participants are relatively evenly distributed across age groups.",
@@ -219,7 +227,7 @@ ggplot(p_data, aes(x = age)) +
 #| code-summary: "Code"
 
 # Creating a data.frame containing the frequencies of educationLevel in our dataset of 1,000 participants
-edu_counts <- data.frame(table(p_data$educationLevel))
+edu_counts <- data.frame(table(new_p_data$educationLevel))
 colnames(edu_counts) <- c("educationLevel", "Counts")
 
 # Adding a percentage variable based on the frequencies
@@ -232,7 +240,7 @@ nice_colors <- c("#80b1d3", "#8dd3c7", "#bebada", "#fccde5")
 ggplot(edu_counts, aes(x = educationLevel, y = Counts)) +
   geom_bar(stat = "identity", fill = nice_colors, color = "white") +
   labs(title = "Education Level Distribution", x = "Education Level", y = "Counts",
-       subtitle = "More than half of participants have highest education level of 'High School/College'.") +
+       subtitle = "This city is rather well-educated.\n93.7% of participants have education higher than 'High School/College'.\n45.7% have education higher than Bachelor's degree.") +
   theme_bw() +
   theme(plot.title = element_text(face = "bold", size = 16),
         plot.subtitle = element_text(size = 12)) +
@@ -246,7 +254,7 @@ ggplot(edu_counts, aes(x = educationLevel, y = Counts)) +
 #| code-summary: "Code"
 
 # Creating a data.frame containing the frequencies of interestGroup in our dataset of 1,000 participants
-interest_counts <- data.frame(table(p_data$interestGroup))
+interest_counts <- data.frame(table(new_p_data$interestGroup))
 colnames(interest_counts) <- c("interestGroup", "Counts")
 
 # Adding a percentage variable based on the frequencies
@@ -263,3 +271,47 @@ ggplot(interest_counts, aes(x = reorder(interestGroup, -Counts), y = Counts)) +
   geom_text(aes(label = pct), vjust = 1.5)
 ```
 :::
+
+## More Data Preparation - Group Data
+
+Let's take a look at the length (no. of rows) of our `new_fin_data`, which is the financial journal for our `r nrow(new_p_data)` participants:
+
+```{r}
+cat("Output:", "There are", nrow(new_fin_data), "rows", "in our dataset.", "\n")
+```
+
+This is rather large and it is due to the fact that each participant can have multiple transactions across different categories. To make the dataset more manageable without losing our ability to conduct meaningful analysis, we could extract the Month-Year from `timestamp` column that records the date and time of each record in POSIXct format. After extracting the Month-Year (as `month_year`), we will sum the total transaction amounts by `participantId`, `category`, and `month_year`:
+
+```{r, message = FALSE}
+grouped_data <-
+  new_fin_data %>%
+  mutate(month_year = floor_date(timestamp, "month")) %>%
+  group_by(participantId, category, month_year) %>%
+  summarise(total_amount = sum(amount)) %>%
+  arrange(participantId, month_year) # sort by ascending
+```
+
+```{r}
+head(grouped_data, 10)
+```
+With this grouped dataset, we can clearly see the expenditure/income for each participant, category, and month-year.
+
+```{r}
+cat("Output:", "There are", nrow(grouped_data), "rows", "in our new dataset.", "\n")
+```
+
+This is a much smaller dataset, which is more manageable, while still providing insights at the monthly interval.
+
+```{r}
+grouped_more_data <-
+  group_by(grouped_data, category, month_year) %>%
+  reframe(total_amount = sum(total_amount)) %>%
+  arrange(month_year)
+
+ggplot(data = grouped_more_data, aes(x = month_year, y = total_amount)) +
+  geom_line(color = "steelblue") +
+  facet_wrap(~category, scales = "free_y", nrow = 3, ncol = 2) +
+  labs(x = "Month-Year", y = "Total Amount") +
+  theme_bw()
+```
+

@@ -18,6 +18,7 @@ website:
         - href: hands-on_ex/hands-on_ex_02.qmd
         - href: hands-on_ex/hands-on_ex_03.qmd
         - href: hands-on_ex/hands-on_ex_04.qmd
+        - href: hands-on_ex/hands-on_ex_05.qmd
     - id: inclass
       title: "In-class Exercises"
       style: "docked"
@@ -27,6 +28,7 @@ website:
         - href: in-class_ex/in-class_ex_02.qmd
         - href: in-class_ex/in-class_ex_03.qmd
         - href: in-class_ex/in-class_ex_04.qmd
+        - href: in-class_ex/in-class_ex_05.qmd
     - id: takehome
       title: "Take-home Exercises"
       style: "docked"

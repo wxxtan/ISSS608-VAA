@@ -1,0 +1,19 @@
+---
+title: "Week 5: In-class Exercise"
+sidebar: false
+pagetitle: "MC1"
+---
+
+```{r}
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse)
+```
+
+```{r}
+MC1 <- fromJSON("data/data_05/MC1.json")
+MC1_nodes <- as_tibble(MC1$nodes) %>%
+  select(id, type, country)
+Mc1_edges <- as_tibble(MC1$links) %>%
+  select(source, target, type, weight, key)
+```
+
+
