@@ -5,7 +5,7 @@ pagetitle: "Take-home Ex 01"
 ---
 
 ```{r, include = FALSE}
-pacman::p_load(tidyverse, dplyr, gganimate, ggiraph, ggplot2, crosstalk, ggrepel, ggthemes, lubridate, ggdist, ggridges, colorspace, ggstatsplot, ungeviz, plotly, DT, FunnelPlotR, knitr, scales, forecast, ggfortify, performance)
+pacman::p_load(tidyverse, dplyr, gganimate, ggiraph, ggplot2, crosstalk, ggrepel, ggthemes, lubridate, ggdist, ggridges, colorspace, ggstatsplot, ungeviz, plotly, DT, FunnelPlotR, knitr, scales, forecast, ggfortify, performance, stats)
 ```
 
 ## Background
@@ -397,14 +397,12 @@ head(merged_data)
 
 Intuitively, households with children should spend the most on education. In this section, we will see from the data whether this is really the case.
 
-The following plots show the monthly amount spent on Education when grouped by the respective variables:
+The following tables/plots show the monthly amount spent on Education when grouped by the respective variables:
 
 ::: panel-tabset
 ## Household Size
 
 ```{r}
-#| code-fold: true
-#| code-summary: "Code"
 #| results: "hold"
 
 tmp <- merged_data %>%
@@ -412,14 +410,14 @@ tmp <- merged_data %>%
   group_by(householdSize) %>%
   summarise(average_monthly_amount = mean(monthly_total_amount))
 tmp
+```
+```{r, echo = FALSE}
 cat("\n", "Only those with householdSize = 3 spend on education, which makes sense since kids are present in households of size 3.", "\n")
 ```
 
 ## Kids?
 
 ```{r}
-#| code-fold: true
-#| code-summary: "Code"
 #| results: "hold"
 
 tmp <- merged_data %>%
@@ -427,7 +425,9 @@ tmp <- merged_data %>%
   group_by(haveKids) %>%
   summarise(average_monthly_amount = mean(monthly_total_amount))
 tmp
-cat("\n", "Only those who have kids will spend on education", "\n")
+```
+```{r, echo = FALSE}
+cat("\n", "Only those who have kids will spend on education.", "\n")
 ```
 
 ## Education Level
@@ -583,7 +583,7 @@ Conclusions:
 
 -   `householdSize` and `haveKids` do not appear to affect how much is spent monthly on food, which is quite puzzling. Could it be the case that household members eat less to accommodate a larger family?
 
--   `educationLevel` shows a slight positive correlation with amount spent monthly on food (based on the plot). However, a caveat is that `educationLevel` may also be positively correlated with wage. This will be explored further later on.
+-   `educationLevel` shows a slight positive correlation with amount spent monthly on food (based on the plot). However, a caveat is that `educationLevel` may also be positively correlated with wage. This is shown to be the case later on.
 
 ## Who Spends Most on Recreation?
 
@@ -805,13 +805,13 @@ Conclusions:
 
 -   Both `householdSize > 1` and `haveKids = TRUE` lead to an observed increase in spending on shelter. This makes sense, as a larger household requires more living space.
 
--   `educationLevel` shows a positive correlation with amount spent monthly on shelter (based on the plot, similar to the case for food). However, a caveat is that `educationLevel` may also be positively correlated with wage. This will be explored further later on.
+-   `educationLevel` shows a positive correlation with amount spent monthly on shelter (based on the plot, similar to the case for food). However, a caveat is that `educationLevel` may also be positively correlated with wage. This is shown to be the case later on.
 
 ## Who Earns Most?
 
-Based on our previous plots for spending on food and shelter across education levels, there are slight observed positive correlations. However, we cannot be sure if wages earned is also correlated. If that is the case, then we cannot attribute the correlation with certainty to either variable.
+Based on our previous plots for spending on food and shelter across education levels, we observe slight positive correlations. In this section, we will check if wage is also positively correlated with education. If that is the case, the increase in spending on food and shelter may also be due to increase in wage.
 
-In this section, we will explore which demographics earn the most in terms of wages.
+More generally, we will explore which demographic group earn the most in terms of wages.
 
 ::: panel-tabset
 ## Household Size
@@ -911,84 +911,261 @@ Conclusions:
 
 -   Wages increase as education level of participants increases.
 
-## Increased Spending on Food and Shelter: Due to Wage or Education?
-
-We noted earlier that education level was positively correlated with spending on food and shelter. But education level is also positively correlated with wages.
-
-To have better clarity on the relationship between the four variables, we will perform two multiple linear regressions. We will skip the usual checks for a linear regression model as we just want to obtain some quick insights.
-
-```{r}
-# Prepare the variables and merge into a dataframe
-wage <- merged_data %>%
-  filter(category == "Wage") %>%
-  select(participantId, monthly_wage = monthly_total_amount)
-food <- merged_data %>%
-  filter(category == "Food") %>%
-  select(participantId, monthly_food = monthly_total_amount)
-shelter <- merged_data %>%
-  filter(category == "Shelter") %>%
-  select(participantId, monthly_shelter = monthly_total_amount)
-education <- merged_data %>%
-  select(participantId, educationLevel) %>%
-  distinct()
-lm_df <- inner_join(wage, food, by = "participantId") %>%
-  inner_join(shelter, by = "participantId") %>%
-  inner_join(education, by = "participantId")
-```
-
-::: panel-tabset
-## Food \~ Wage + educationLevel
-
-```{r}
-model <- lm(monthly_food ~ monthly_wage + educationLevel,
-            data = lm_df)
-summary(model)
-```
-
-## Shelter \~ Wage + educationLevel
-
-```{r}
-model <- lm(monthly_shelter ~ monthly_wage + educationLevel,
-            data = lm_df)
-summary(model)
-```
-:::
-
-Based on the output of the models, while the coefficients on `monthly_wage` and `educationLevel` are statistically significant at the 5% level (indicated by at least a \* next to the p-values), the multiple R-squared is very low, at less than 10% for both models. This means that less than 10% of the variance in `monthly_food` and `monthly_shelter` are explained by the regression models. There are likely to be some omitted variables that, when included, would help explain the variance in the dependent variables better.
-
-On the other hand, when a linear regression of `monthly_wage` on `educationLevel` is performed:
-
-```{r}
-model <- lm(monthly_wage ~ educationLevel,
-            data = lm_df)
-summary(model)
-```
-
-A single explanatory variable in this model already achieved an adjusted R-squared of 30.5%. This implies that 30.5% of the variation in monthly wage is explained by variations in education level.
-
-However, the model does fail the usual checks, such as this one for normality of residuals:
-
-```{r}
-check_normality(model) %>% plot()
-```
-
-This is likely because of the fact that we are using a discrete explanatory variable, `educationLevel`, with only 4 levels. Hence, the results of these linear regression models should be taken with a pinch of salt.
-
 ## Does Higher Wage Equate More Happiness?
 
 There is still one more variable that we have yet to explore - `joviality` in the demographics dataset.
 
-Lastly, we will check whether higher wages lead to more happiness.
+Let's explore the relationship between `joviality` and average monthly wages using an interactive plot:
 
 ```{r}
-joviality <- merged_data %>%
-  select("participantId", "joviality") %>%
-  distinct()
-lm_df <- inner_join(wage, joviality, by = "participantId")
+# Add wage and ageGroup to our data
+wage <- merged_data %>%
+  filter(category == "Wage") %>%
+  select(participantId, monthly_wage = monthly_total_amount)
+tmp <- inner_join(new_p_data, wage, by = "participantId")
+tmp$ageGroup <- cut(
+  tmp$age,
+  breaks = c(0, 29, 39, 49, Inf),
+  labels = c("18-29", "30-39", "40-49", "50-60")
+)
 
-model <- lm(joviality ~ monthly_wage,
-            data = lm_df)
+# Add tooltip information
+tooltip <- c(paste("Wage: $", tmp$monthly_wage %>% round(0),
+                   "\nJoviality: ", tmp$joviality %>% round(2),
+                   "\n",
+                   "\nID: ", tmp$participantId,
+                   "\nHousehold Size: ", tmp$householdSize,
+                   "\nHave kids?: ", tmp$haveKids,
+                   "\nAge: ", tmp$age,
+                   "\nEducation Level: ", tmp$educationLevel,
+                   "\nInterest Group: ", tmp$interestGroup,
+                   sep = ""))
+```
+
+### Choose the variables to colour by:
+
+::: panel-tabset
+## Household Size
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+plt <- ggplot(tmp, aes(x = monthly_wage,
+                       y = joviality)) +
+  geom_point_interactive(
+    aes(
+      tooltip = tooltip,
+      data_id = householdSize,
+      color = factor(householdSize)
+      ),
+    size = 1.5) +
+  scale_color_brewer(type = "qual", palette = "Set2") +
+  labs(
+    x = "Monthly Wage",
+    y = "Joviality",
+    title = "Scatterplot of Joviality vs. Monthly Wage",
+    subtitle = "Points coloured by Household Size",
+    color = "Household Size"
+  ) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 10, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.title = element_text(size = 10)
+  )
+
+girafe(ggobj = plt,
+       options = list(opts_hover(css = ''),
+                      opts_hover_inv(css = "opacity: 0.3;")))
+```
+
+## Kids?
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+plt <- ggplot(tmp, aes(x = monthly_wage,
+                       y = joviality)) +
+  geom_point_interactive(
+    aes(
+      tooltip = tooltip,
+      data_id = haveKids,
+      color = factor(haveKids)
+      ),
+    size = 1.5) +
+  scale_color_brewer(type = "qual", palette = "Set2") +
+  labs(
+    x = "Monthly Wage",
+    y = "Joviality",
+    title = "Scatterplot of Joviality vs. Monthly Wage",
+    subtitle = "Points coloured by Presence of Kids",
+    color = "Presence of Kids"
+  ) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 10, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.title = element_text(size = 10)
+  )
+
+girafe(ggobj = plt,
+       options = list(opts_hover(css = ''),
+                      opts_hover_inv(css = "opacity: 0.3;")))
+```
+
+## Age
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+plt <- ggplot(tmp, aes(x = monthly_wage,
+                       y = joviality)) +
+  geom_point_interactive(
+    aes(
+      tooltip = tooltip,
+      data_id = ageGroup,
+      color = factor(ageGroup)
+      ),
+    size = 1.5) +
+  scale_color_brewer(type = "qual", palette = "Set2") +
+  labs(
+    x = "Monthly Wage",
+    y = "Joviality",
+    title = "Scatterplot of Joviality vs. Monthly Wage",
+    subtitle = "Points coloured by Age Group",
+    color = "Age Group"
+  ) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 10, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.title = element_text(size = 10)
+  )
+
+girafe(ggobj = plt,
+       options = list(opts_hover(css = ''),
+                      opts_hover_inv(css = "opacity: 0.3;")))
+```
+
+## Education Level
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+plt <- ggplot(tmp, aes(x = monthly_wage,
+                       y = joviality)) +
+  geom_point_interactive(
+    aes(
+      tooltip = tooltip,
+      data_id = educationLevel,
+      color = factor(educationLevel)
+      ),
+    size = 1.5) +
+  scale_color_brewer(type = "qual", palette = "Set2") +
+  labs(
+    x = "Monthly Wage",
+    y = "Joviality",
+    title = "Scatterplot of Joviality vs. Monthly Wage",
+    subtitle = "Points coloured by Education Level",
+    color = "Education Level"
+  ) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 10, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.title = element_text(size = 10)
+  )
+
+girafe(ggobj = plt,
+       options = list(opts_hover(css = ''),
+                      opts_hover_inv(css = "opacity: 0.3;")))
+```
+
+## Interest Group
+
+```{r}
+#| code-fold: true
+#| code-summary: "Code"
+
+plt <- ggplot(tmp, aes(x = monthly_wage,
+                       y = joviality)) +
+  geom_point_interactive(
+    aes(
+      tooltip = tooltip,
+      data_id = interestGroup,
+      color = factor(interestGroup)
+      ),
+    size = 1.5) +
+  scale_color_brewer(type = "qual", palette = "Set3") +
+  labs(
+    x = "Monthly Wage",
+    y = "Joviality",
+    title = "Scatterplot of Joviality vs. Monthly Wage",
+    subtitle = "Points coloured by Interest Group",
+    color = "Interest Group"
+  ) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 10, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.title = element_text(size = 10)
+  )
+
+girafe(ggobj = plt,
+       options = list(opts_hover(css = ''),
+                      opts_hover_inv(css = "opacity: 0.3;")))
+```
+:::
+
+Conclusions:
+
+-   When colouring our data points by `educationLevel`, we can see that the points are grouped together somewhat by `educationLevel`. The higher the `educationLevel`, the higher the monthly wage. However, all variables do not seem to have any clear relationship with `joviality` (points are evenly spread out across the y-axis).
+
+-   There is no clear relationship between `joviality` and monthly wage. Money is not correlated with happiness (at least for this sample of participants).
+
+
+## Verifying Insights from Visual Plots Using Analysis of Variance (ANOVA)
+
+Earlier, based on our earlier plots, we derived the following insights:
+
+-   `householdSize`, `haveKids`, and `educationLevel` exhibit a visually noticeable positive relationship with monthly wage
+
+-   Variables did not exhibit any visually noticeable relationships with `joviality`.
+
+We will now use ANOVA models to verify our earlier conclusions:
+
+### ANOVA with `monthly_wage` as dependent variable
+```{r}
+model <- aov(monthly_wage ~ householdSize + haveKids + ageGroup + educationLevel + interestGroup,
+            data = tmp)
 summary(model)
 ```
 
-It is interesting to note that the sign on the coefficient of `monthly_wage` is negative, and that it is statistically significant. This implies that an increase in `monthly_wage` is associated with a decrease in `joviality`. Participants who earned higher wages are associated with lower levels of happiness!
+`householdSize`, `haveKids`, and `educationLevel` have p-values < 0.05, indicating that their effects on monthly wage are significant at the 5% level. This verifies our first insight.
+
+### ANOVA with `joviality` as dependent variable
+```{r}
+model <- aov(joviality ~ householdSize + haveKids + ageGroup + educationLevel + interestGroup,
+            data = tmp)
+summary(model)
+```
+
+`educationLevel` has p-value < 0.05, indicating that its effect on joviality is significant at the 5% level. This is something that we did not notice through our earlier visual plots. We should run a linear regression model to confirm the direction of this effect (positive or negative):
+
+```{r}
+model <- lm(joviality ~ educationLevel, data = tmp)
+summary(model)
+```
+
+Since the coefficient on `educationLevel.L` is positive and statistically significant at the 5% level, we can conclude that a higher education level is associated with higher joviality.
+
+(Note: 'L' stands for linear, 'Q' stands for quadratic, 'C' stands for cubic. Coefficients are as such due to the fact that `educationLevel` is an ordered factor.)
