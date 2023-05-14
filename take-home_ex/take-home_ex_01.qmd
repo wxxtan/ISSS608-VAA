@@ -427,6 +427,7 @@ tmp <- merged_data %>%
 tmp
 ```
 ```{r, echo = FALSE}
+<<<<<<< HEAD
 cat("\n", "Only those who have kids will spend on education.", "\n")
 ```
 
