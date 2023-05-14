@@ -556,7 +556,7 @@ ggplot(tmp, aes(x = educationLevel, y = abs(average_monthly_amount))) +
         plot.subtitle = element_text(size = 12))
 ```
 
-## Education Level
+## Interest Group
 
 ```{r}
 #| code-fold: true
@@ -564,14 +564,14 @@ ggplot(tmp, aes(x = educationLevel, y = abs(average_monthly_amount))) +
 
 tmp <- merged_data %>%
   filter(category == "Food") %>%
-  group_by(educationLevel) %>%
+  group_by(interestGroup) %>%
   summarise(average_monthly_amount = mean(monthly_total_amount))
 
-ggplot(tmp, aes(x = educationLevel, y = abs(average_monthly_amount))) +
+ggplot(tmp, aes(x = reorder(interestGroup, -abs(average_monthly_amount)), y = abs(average_monthly_amount))) +
   geom_bar(stat = "identity", fill = "#80b1d3") +
-  labs(title = "Average Monthly Amount Spent on Food by Education Level",
-       subtitle = "Slight positive correlation between education level and amount spent on food.",
-       x = "\nEducation Level",
+  labs(title = "Average Monthly Amount Spent on Food by Interest Group",
+       subtitle = "Slight differences in amount spent on food across interest groups",
+       x = "\nInterest Group",
        y = "Average Monthly Amount\nSpent on Food ($)\n") +
   theme_bw() +
   theme(plot.title = element_text(face = "bold", size = 14),
