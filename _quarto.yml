@@ -33,7 +33,8 @@ website:
       style: "docked"
       collapse-level: 2
       contents:
-        href: take-home_ex/take-home_ex_01.qmd
+        - href: take-home_ex/take-home_ex_01.qmd
+        - href: take-home_ex/take-home_ex_02.qmd
 
 format:
   html:
