@@ -126,7 +126,7 @@ for (y in years) {
         shape = 21,
         alpha = 0.8
       ) +
-      scale_fill_manual(labels = c("Zero", "Non-zero"), values = c("firebrick1", "cyan"), name = "In-degree") +
+      scale_fill_manual(labels = c("Zero", "Non-zero"), values = c("cyan", "firebrick1"), name = "In-degree") +
       scale_size_continuous(range = (c(1, 10)), name = "Betweenness") +
       theme_graph(
         foreground = "grey20",
