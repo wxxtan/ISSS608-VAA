@@ -1,0 +1,198 @@
+---
+title: "Take-home Exercise 02"
+sidebar: false
+pagetitle: "Take-home Ex 02"
+---
+
+```{r, include = FALSE}
+pacman::p_load(tidyverse, dplyr, gganimate, ggiraph, ggplot2, crosstalk, ggrepel, ggthemes, lubridate, ggdist, ggridges, colorspace, ggstatsplot, ungeviz, plotly, DT, FunnelPlotR, knitr, scales, forecast, ggfortify, performance, stats, igraph, tidygraph, ggraph, visNetwork, clock, graphlayouts, jsonlite, patchwork, readxl, DT)
+```
+
+```{r, warning = FALSE}
+json_file_path <- "data/mc2_challenge_graph.json"
+mc2_file_path <- "data/mc2.rds"
+
+if (!file.exists(mc2_file_path)) {
+  mc2 <- fromJSON(json_file_path)
+  saveRDS(mc2, mc2_file_path)
+} else {
+  mc2 <- readRDS(mc2_file_path)
+}
+```
+
+```{r}
+mc2_nodes <- as_tibble(mc2$nodes) %>%
+  select(id, shpcountry, rcvcountry)
+
+mc2_edges <- as_tibble(mc2$links) %>%
+  mutate(ArrivalDate = ymd(arrivaldate)) %>%
+  mutate(Year = year(ArrivalDate)) %>%
+  select(
+    source,
+    target,
+    ArrivalDate,
+    Year,
+    hscode,
+    valueofgoods_omu,
+    volumeteu,
+    weightkg,
+    valueofgoodsusd
+  ) %>%
+  distinct()
+
+mc2_edges$grp_hscode <- substr(mc2_edges$hscode, 1, 1)
+```
+
+```{r}
+ids <- union(unique(mc2_edges$source),
+            unique(mc2_edges$target)) %>% sort() %>% as_tibble()
+colnames(ids) <- "name"
+ids <- ids %>% mutate(cid = row_number())
+ids$cid <- factor(ids$cid)
+```
+
+```{r, message = FALSE}
+mc2_edges_agg <- mc2_edges %>%
+  group_by(source, target, grp_hscode, Year) %>%
+  summarise(num_trades = n(),
+            total_weightkg = sum(weightkg)) %>%
+  filter(source != target) %>%
+  filter(num_trades > 20) %>%
+  ungroup()
+```
+
+```{r}
+id1 <- mc2_edges_agg %>%
+  select(source, Year) %>%
+  rename(id = source)
+id2 <- mc2_edges_agg %>%
+  select(target, Year) %>%
+  rename(id = target)
+mc2_nodes_extracted <- rbind(id1, id2) %>%
+  distinct()
+mc2_nodes_extracted <- merge(mc2_nodes_extracted,
+                             ids,
+                             by.x = "id",
+                             by.y = "name")
+```
+
+```{r}
+mc2_graph <- tbl_graph(nodes = mc2_nodes_extracted,
+                       edges = mc2_edges_agg,
+                       directed = TRUE)
+```
+
+```{r, warning = FALSE}
+years = c("2028", "2029", "2030", "2031", "2032", "2033", "2034")
+
+for (y in years) {
+  mygraph <- paste("mc2", "graph", y, sep = "_")
+  assign(
+    mygraph,
+    mc2_graph %>%
+      activate(edges) %>%
+      filter(Year == y) %>%
+      activate(nodes) %>%
+      filter(!node_is_isolated()) %>%
+      mutate(betweenness_centrality = centrality_betweenness(weights = num_trades)) %>%
+      mutate(indegree_centrality = centrality_degree(weights = num_trades,
+                                                     mode = "in"))
+  )
+  
+  assign(
+    paste("g", y, sep = "_"),
+    ggraph(get(mygraph),
+           layout = "nicely") +
+      geom_edge_link(aes(width = num_trades,
+                         color = grp_hscode),
+                     alpha = 0.6) +
+      scale_edge_width(range = c(0.4, 4), name = "Total weight") +
+      scale_edge_color_brewer(name = "HS code group",
+                              palette = "Set1") +
+      geom_point_interactive(
+        aes(
+          x = x,
+          y = y,
+          tooltip = paste0(
+            "Name:  ", id,
+            "\nIn-degree:  ", indegree_centrality,
+            "\nBetweenness:  ", betweenness_centrality
+          ),
+          data_id = indegree_centrality > 0,
+          size = betweenness_centrality,
+          fill = indegree_centrality > 0
+        ),
+        colour = "grey20",
+        shape = 21,
+        alpha = 0.8
+      ) +
+      scale_fill_manual(labels = c("Non-zero", "Zero"), values = c("cyan", "firebrick1"), name = "In-degree") +
+      scale_size_continuous(range = (c(1, 10)), name = "Betweenness") +
+      theme_graph(
+        foreground = "grey20",
+      ) +
+      labs(title = y) +
+      theme(plot.title = element_text(size = 11))
+  )
+}
+```
+
+### Tabbed by years
+
+::: panel-tabset
+## 2028
+
+```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
+girafe(ggobj = g_2028,
+       options = list(opts_hover(css = "fill:;"),
+                      opts_hover_inv(css = "opacity: 0.2;")))
+```
+
+## 2029
+
+```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
+girafe(ggobj = g_2029,
+       options = list(opts_hover(css = "fill:;"),
+                      opts_hover_inv(css = "opacity: 0.2;")))
+```
+
+## 2030
+
+```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
+girafe(ggobj = g_2030,
+       options = list(opts_hover(css = "fill:;"),
+                      opts_hover_inv(css = "opacity: 0.2;")))
+```
+
+## 2031
+
+```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
+girafe(ggobj = g_2031,
+       options = list(opts_hover(css = "fill:;"),
+                      opts_hover_inv(css = "opacity: 0.2;")))
+```
+
+## 2032
+
+```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
+girafe(ggobj = g_2032,
+       options = list(opts_hover(css = "fill:;"),
+                      opts_hover_inv(css = "opacity: 0.2;")))
+```
+
+## 2033
+
+```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
+girafe(ggobj = g_2033,
+       options = list(opts_hover(css = "fill:;"),
+                      opts_hover_inv(css = "opacity: 0.2;")))
+```
+
+## 2034
+
+```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
+girafe(ggobj = g_2034,
+       options = list(opts_hover(css = "fill:;"),
+                      opts_hover_inv(css = "opacity: 0.2;")))
+```
+:::
