@@ -63,10 +63,10 @@ mc2_edges_agg <- mc2_edges %>%
 
 ```{r}
 id1 <- mc2_edges_agg %>%
-  select(source, Year) %>%
+  select(source) %>%
   rename(id = source)
 id2 <- mc2_edges_agg %>%
-  select(target, Year) %>%
+  select(target) %>%
   rename(id = target)
 mc2_nodes_extracted <- rbind(id1, id2) %>%
   distinct()
@@ -74,12 +74,17 @@ mc2_nodes_extracted <- merge(mc2_nodes_extracted,
                              ids,
                              by.x = "id",
                              by.y = "name")
+rm(id1, id2)
 ```
 
 ```{r}
 mc2_graph <- tbl_graph(nodes = mc2_nodes_extracted,
                        edges = mc2_edges_agg,
-                       directed = TRUE)
+                       directed = TRUE) %>%
+  activate(nodes) %>%
+  mutate(betweenness_centrality = centrality_betweenness(weights = num_trades)) %>%
+  mutate(outdegree_centrality = centrality_degree(weights = num_trades,
+                                                  mode = "out"))
 ```
 
 ```{r, warning = FALSE}
@@ -95,10 +100,10 @@ for (y in years) {
       activate(nodes) %>%
       filter(!node_is_isolated()) %>%
       mutate(betweenness_centrality = centrality_betweenness(weights = num_trades)) %>%
-      mutate(indegree_centrality = centrality_degree(weights = num_trades,
-                                                     mode = "in"))
+      mutate(outdegree_centrality = centrality_degree(weights = num_trades,
+                                                      mode = "out"))
   )
-  
+
   assign(
     paste("g", y, sep = "_"),
     ggraph(get(mygraph),
@@ -115,18 +120,19 @@ for (y in years) {
           y = y,
           tooltip = paste0(
             "Name:  ", id,
-            "\nIn-degree:  ", indegree_centrality,
+            "\nCompany ID:  ", cid,
+            "\nOut-degree:  ", outdegree_centrality,
             "\nBetweenness:  ", betweenness_centrality
           ),
-          data_id = indegree_centrality > 0,
+          data_id = outdegree_centrality > 0,
           size = betweenness_centrality,
-          fill = indegree_centrality > 0
+          fill = outdegree_centrality > 0
         ),
         colour = "grey20",
         shape = 21,
         alpha = 0.8
       ) +
-      scale_fill_manual(labels = c("Zero", "Non-zero"), values = c("firebrick1", "cyan"), name = "In-degree") +
+      scale_fill_manual(labels = c("Zero", "Non-zero"), values = c("cyan", "firebrick1"), name = "Out-degree") +
       scale_size_continuous(range = (c(1, 10)), name = "Betweenness") +
       theme_graph(
         foreground = "grey20",
@@ -135,6 +141,8 @@ for (y in years) {
       theme(plot.title = element_text(size = 11))
   )
 }
+
+rm(y, years, mygraph)
 ```
 
 ### Tabbed by years
@@ -145,7 +153,10 @@ for (y in years) {
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
 girafe(ggobj = g_2028,
        options = list(opts_hover(css = "fill:;"),
-                      opts_hover_inv(css = "opacity: 0.2;")))
+                      opts_hover_inv(css = "opacity: 0.2;"),
+                      opts_selection(type = "multiple", only_shiny = FALSE,
+                                     css = "opacity:1;"),
+                      opts_selection_inv(css = "opacity:0;")))
 ```
 
 ## 2029
@@ -153,7 +164,10 @@ girafe(ggobj = g_2028,
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
 girafe(ggobj = g_2029,
        options = list(opts_hover(css = "fill:;"),
-                      opts_hover_inv(css = "opacity: 0.2;")))
+                      opts_hover_inv(css = "opacity: 0.2;"),
+                      opts_selection(type = "multiple", only_shiny = FALSE,
+                                     css = "opacity:1;"),
+                      opts_selection_inv(css = "opacity:0;")))
 ```
 
 ## 2030
@@ -161,7 +175,10 @@ girafe(ggobj = g_2029,
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
 girafe(ggobj = g_2030,
        options = list(opts_hover(css = "fill:;"),
-                      opts_hover_inv(css = "opacity: 0.2;")))
+                      opts_hover_inv(css = "opacity: 0.2;"),
+                      opts_selection(type = "multiple", only_shiny = FALSE,
+                                     css = "opacity:1;"),
+                      opts_selection_inv(css = "opacity:0;")))
 ```
 
 ## 2031
@@ -169,7 +186,10 @@ girafe(ggobj = g_2030,
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
 girafe(ggobj = g_2031,
        options = list(opts_hover(css = "fill:;"),
-                      opts_hover_inv(css = "opacity: 0.2;")))
+                      opts_hover_inv(css = "opacity: 0.2;"),
+                      opts_selection(type = "multiple", only_shiny = FALSE,
+                                     css = "opacity:1;"),
+                      opts_selection_inv(css = "opacity:0;")))
 ```
 
 ## 2032
@@ -177,7 +197,10 @@ girafe(ggobj = g_2031,
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
 girafe(ggobj = g_2032,
        options = list(opts_hover(css = "fill:;"),
-                      opts_hover_inv(css = "opacity: 0.2;")))
+                      opts_hover_inv(css = "opacity: 0.2;"),
+                      opts_selection(type = "multiple", only_shiny = FALSE,
+                                     css = "opacity:1;"),
+                      opts_selection_inv(css = "opacity:0;")))
 ```
 
 ## 2033
@@ -185,7 +208,10 @@ girafe(ggobj = g_2032,
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
 girafe(ggobj = g_2033,
        options = list(opts_hover(css = "fill:;"),
-                      opts_hover_inv(css = "opacity: 0.2;")))
+                      opts_hover_inv(css = "opacity: 0.2;"),
+                      opts_selection(type = "multiple", only_shiny = FALSE,
+                                     css = "opacity:1;"),
+                      opts_selection_inv(css = "opacity:0;")))
 ```
 
 ## 2034
@@ -193,6 +219,47 @@ girafe(ggobj = g_2033,
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
 girafe(ggobj = g_2034,
        options = list(opts_hover(css = "fill:;"),
-                      opts_hover_inv(css = "opacity: 0.2;")))
+                      opts_hover_inv(css = "opacity: 0.2;"),
+                      opts_selection(type = "multiple", only_shiny = FALSE,
+                                     css = "opacity:1;"),
+                      opts_selection_inv(css = "opacity:0;")))
 ```
 :::
+
+```{r}
+cat("There are", length(unique(c(mc2_edges_agg$source, mc2_edges_agg$target))), "companies in the dataset.", "")
+
+companies_closed_down_1 <- mc2_edges_agg %>%
+  group_by(source) %>%
+  summarise(year_of_closure = max(Year)) %>%
+  filter(year_of_closure < max(mc2_edges_agg$Year))
+companies_closed_down_2 <- mc2_edges_agg %>%
+  group_by(target) %>%
+  summarise(year_of_closure = max(Year)) %>%
+  filter(year_of_closure < max(mc2_edges_agg$Year))
+
+companies_closed_down <-
+  merge(
+    companies_closed_down_1,
+    companies_closed_down_2,
+    by.x = "source",
+    by.y = "target",
+    all = TRUE
+  )
+companies_closed_down$year_of_closure <-
+  pmax(
+    companies_closed_down$year_of_closure.x,
+    companies_closed_down$year_of_closure.y,
+    na.rm = TRUE
+  )
+companies_closed_down <- companies_closed_down %>%
+  select(name = source, year_of_closure)
+cat(nrow(companies_closed_down), "companies with 0 betweenness centrality and non-zero out-degree centrality have closed down prematurely.", "\n")
+cat("These companies are:", "\n")
+
+datatable(companies_closed_down)
+rm(companies_closed_down_1, companies_closed_down_2)
+```
+
+
+
