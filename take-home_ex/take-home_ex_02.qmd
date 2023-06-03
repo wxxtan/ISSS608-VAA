@@ -88,7 +88,7 @@ mc2_graph <- tbl_graph(nodes = mc2_nodes_extracted,
 ```
 
 ```{r, warning = FALSE}
-years = c("2028", "2029", "2030", "2031", "2032", "2033", "2034")
+years = c("2028")
 
 for (y in years) {
   mygraph <- paste("mc2", "graph", y, sep = "_")
@@ -145,10 +145,7 @@ for (y in years) {
 rm(y, years, mygraph)
 ```
 
-### Tabbed by years
-
-::: panel-tabset
-## 2028
+### Network graph for year 2028
 
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
 girafe(ggobj = g_2028,
@@ -159,21 +156,124 @@ girafe(ggobj = g_2028,
                       opts_selection_inv(css = "opacity:0;")))
 ```
 
-## 2029
+```{r, results = "hold"}
+cat("There are", length(unique(
+  c(mc2_edges_agg$source, mc2_edges_agg$target)
+)), "companies in the dataset.", "\n")
 
-```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
-girafe(ggobj = g_2029,
-       options = list(opts_hover(css = "fill:;"),
-                      opts_hover_inv(css = "opacity: 0.2;"),
-                      opts_selection(type = "multiple", only_shiny = FALSE,
-                                     css = "opacity:1;"),
-                      opts_selection_inv(css = "opacity:0;")))
+suspects <- mc2_graph %>% activate(nodes) %>% data.frame() %>% tibble() %>%
+  filter(betweenness_centrality == 0) %>%
+  filter(outdegree_centrality > 0)
+
+companies_closed_down_1 <- mc2_edges_agg %>%
+  group_by(source) %>%
+  summarise(year_of_closure = max(Year))
+companies_closed_down_2 <- mc2_edges_agg %>%
+  group_by(target) %>%
+  summarise(year_of_closure = max(Year))
+
+companies_closed_down <-
+  merge(
+    companies_closed_down_1,
+    companies_closed_down_2,
+    by.x = "source",
+    by.y = "target",
+    all = TRUE
+  )
+companies_closed_down$year_of_closure <-
+  pmax(
+    companies_closed_down$year_of_closure.x,
+    companies_closed_down$year_of_closure.y,
+    na.rm = TRUE
+  )
+suspects <- companies_closed_down %>%
+  select(name = source, year_of_closure) %>%
+  filter(year_of_closure < max(mc2_edges_agg$Year)) %>%
+  filter(name %in% suspects$id)
+
+cat(
+  nrow(suspects),
+  "companies with zero betweenness centrality and non-zero out-degree centrality have closed down prematurely.",
+  "\n"
+)
+cat("These companies are:", "\n")
+
+datatable(suspects)
+rm(companies_closed_down_1, companies_closed_down_2, companies_closed_down)
 ```
 
-## 2030
+```{r}
+mc2_graph <- mc2_graph %>%
+  activate(nodes) %>%
+  mutate(suspicious = ifelse(id %in% suspects$name, "Yes", "No"))
+```
+
+```{r, warning = FALSE}
+years = c("2028", "2031", "2034")
+
+for (y in years) {
+  mygraph <- paste("mc2", "graph", y, sep = "_")
+  assign(
+    mygraph,
+    mc2_graph %>%
+      activate(edges) %>%
+      filter(Year == y) %>%
+      activate(nodes) %>%
+      filter(!node_is_isolated()) %>%
+      mutate(betweenness_centrality = centrality_betweenness(weights = num_trades)) %>%
+      mutate(outdegree_centrality = centrality_degree(weights = num_trades,
+                                                      mode = "out"))
+  )
+
+  assign(
+    paste("g", y, sep = "_"),
+    ggraph(get(mygraph),
+           layout = "nicely") +
+      geom_edge_link(aes(width = num_trades,
+                         color = grp_hscode),
+                     alpha = 0.6) +
+      scale_edge_width(range = c(0.4, 4), name = "Total weight") +
+      scale_edge_color_brewer(name = "HS code group",
+                              palette = "Set1") +
+      geom_point_interactive(
+        aes(
+          x = x,
+          y = y,
+          tooltip = paste0(
+            "Name:  ", id,
+            "\nCompany ID:  ", cid,
+            "\nOut-degree:  ", outdegree_centrality,
+            "\nBetweenness:  ", betweenness_centrality,
+            "\nSuspicious?:  ", suspicious
+          ),
+          data_id = suspicious,
+          size = betweenness_centrality,
+          fill = suspicious
+        ),
+        colour = "grey20",
+        shape = 21,
+        alpha = 0.8
+      ) +
+      scale_fill_manual(values = c("cyan", "firebrick1"), name = "Suspicious?") +
+      scale_size_continuous(range = (c(1, 10)), name = "Betweenness") +
+      theme_graph(
+        foreground = "grey20",
+      ) +
+      labs(title = y) +
+      theme(plot.title = element_text(size = 11))
+  )
+}
+
+rm(y, years, mygraph)
+```
+
+### Tabbed by years
+
+::: panel-tabset
+## 2028
 
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
-girafe(ggobj = g_2030,
+girafe(ggobj = g_2028,
        options = list(opts_hover(css = "fill:;"),
                       opts_hover_inv(css = "opacity: 0.2;"),
                       opts_selection(type = "multiple", only_shiny = FALSE,
@@ -192,28 +292,6 @@ girafe(ggobj = g_2031,
                       opts_selection_inv(css = "opacity:0;")))
 ```
 
-## 2032
-
-```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
-girafe(ggobj = g_2032,
-       options = list(opts_hover(css = "fill:;"),
-                      opts_hover_inv(css = "opacity: 0.2;"),
-                      opts_selection(type = "multiple", only_shiny = FALSE,
-                                     css = "opacity:1;"),
-                      opts_selection_inv(css = "opacity:0;")))
-```
-
-## 2033
-
-```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
-girafe(ggobj = g_2033,
-       options = list(opts_hover(css = "fill:;"),
-                      opts_hover_inv(css = "opacity: 0.2;"),
-                      opts_selection(type = "multiple", only_shiny = FALSE,
-                                     css = "opacity:1;"),
-                      opts_selection_inv(css = "opacity:0;")))
-```
-
 ## 2034
 
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
@@ -225,41 +303,4 @@ girafe(ggobj = g_2034,
                       opts_selection_inv(css = "opacity:0;")))
 ```
 :::
-
-```{r}
-cat("There are", length(unique(c(mc2_edges_agg$source, mc2_edges_agg$target))), "companies in the dataset.", "")
-
-companies_closed_down_1 <- mc2_edges_agg %>%
-  group_by(source) %>%
-  summarise(year_of_closure = max(Year)) %>%
-  filter(year_of_closure < max(mc2_edges_agg$Year))
-companies_closed_down_2 <- mc2_edges_agg %>%
-  group_by(target) %>%
-  summarise(year_of_closure = max(Year)) %>%
-  filter(year_of_closure < max(mc2_edges_agg$Year))
-
-companies_closed_down <-
-  merge(
-    companies_closed_down_1,
-    companies_closed_down_2,
-    by.x = "source",
-    by.y = "target",
-    all = TRUE
-  )
-companies_closed_down$year_of_closure <-
-  pmax(
-    companies_closed_down$year_of_closure.x,
-    companies_closed_down$year_of_closure.y,
-    na.rm = TRUE
-  )
-companies_closed_down <- companies_closed_down %>%
-  select(name = source, year_of_closure)
-cat(nrow(companies_closed_down), "companies with 0 betweenness centrality and non-zero out-degree centrality have closed down prematurely.", "\n")
-cat("These companies are:", "\n")
-
-datatable(companies_closed_down)
-rm(companies_closed_down_1, companies_closed_down_2)
-```
-
-
 

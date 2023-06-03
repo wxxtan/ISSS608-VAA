@@ -1,0 +1,44 @@
+---
+title: "Week 7: In-class Exercise"
+sidebar: false
+pagetitle: "In-class Ex 07"
+---
+
+## More Tableau dashboarding - Time series data
+
+[Line graph](https://public.tableau.com/app/profile/wilson.tan3320/viz/In-classExercise07-LineGraph/Dashboard1). [Slopegraph](https://public.tableau.com/app/profile/wilson.tan3320/viz/In-classExercise07-Slopegraph/Dashboard1) [Heatmap](https://public.tableau.com/app/profile/wilson.tan3320/viz/In-classExercise07-Heatmap/Heatmap)
+
+## 
+
+```{r}
+pacman::p_load(ggHoriPlot, ggthemes, tidyverse)
+```
+
+```{r}
+averp <- read_csv("data/data_07/AVERP.csv") %>%
+  mutate(`Date` = day(`Date`))
+```
+
+```{r}
+averp %>% 
+  filter(Date >= "2018-01-01") %>%
+  ggplot() +
+  geom_horizon(aes(x = Date, y=Values), 
+               origin = "midpoint", 
+               horizonscale = 6) +
+  facet_grid(averp$`Consumer Items` ~ .) +
+    theme_few() +
+  scale_fill_hcl(palette = 'RdBu') +
+  theme(panel.spacing.y=unit(0, "lines"), strip.text.y = element_text(
+    size = 5, angle = 0, hjust = 0),
+    legend.position = 'none',
+    axis.text.y = element_blank(),
+    axis.text.x = element_text(size=7),
+    axis.title.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    panel.border = element_blank()
+    ) +
+    scale_x_date(expand=c(0,0), date_breaks = "3 month", date_labels = "%b%y") +
+  ggtitle('Average Retail Prices of Selected Consumer Items (Jan 2018 to Dec 2022)')
+```

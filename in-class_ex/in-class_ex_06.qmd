@@ -1,0 +1,11 @@
+---
+title: "Week 6: In-class Exercise"
+sidebar: false
+pagetitle: "In-class Ex 06"
+---
+
+## More Tableau dashboarding
+
+There are a few: [PCP](https://public.tableau.com/app/profile/wilson.tan3320/viz/In-classExercise06-PCP/Dashboard1), [Heatmap](https://public.tableau.com/app/profile/wilson.tan3320/viz/In-classExercise06-Heatmap/Dashboard1), and [Treemap](https://public.tableau.com/app/profile/wilson.tan3320/viz/In-classExercise06-Treemap/Dashboard1).
+
+

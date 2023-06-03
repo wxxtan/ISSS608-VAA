@@ -28,6 +28,8 @@ website:
         - href: in-class_ex/in-class_ex_03.qmd
         - href: in-class_ex/in-class_ex_04.qmd
         - href: in-class_ex/in-class_ex_05.qmd
+        - href: in-class_ex/in-class_ex_06.qmd
+        - href: in-class_ex/in-class_ex_07.qmd
     - id: takehome
       title: "Take-home Exercises"
       style: "docked"
