@@ -8,6 +8,18 @@ pagetitle: "Take-home Ex 02"
 pacman::p_load(tidyverse, dplyr, gganimate, ggiraph, ggplot2, crosstalk, ggrepel, ggthemes, lubridate, ggdist, ggridges, colorspace, ggstatsplot, ungeviz, plotly, DT, FunnelPlotR, knitr, scales, forecast, ggfortify, performance, stats, igraph, tidygraph, ggraph, visNetwork, clock, graphlayouts, jsonlite, patchwork, readxl, DT)
 ```
 
+## Detecting illegal, unreported, and unregulated (IUU) fishing
+
+FishEye International has provided import/export data ranging from the year 2028 to 2034 regarding Oceanus' fishing industries. This exercise attempts to make use of the data provided to detect those who are involved in IUU fishing, and in particular, to answer the following questions:
+
+-   Use visual analytics to identify temporal patterns for individual entities and between entities in the knowledge graph FishEye created from trade records. Categorize the types of business relationship patterns you find.
+
+-   Identify companies that fit a pattern of illegal fishing. Use visualizations to support your conclusions and your confidence in them.
+
+### Import data
+
+The following code chunk is used to import the data. Since the provided data is in *.json* format, the `fromJSON()` function is used:
+
 ```{r, warning = FALSE}
 json_file_path <- "data/mc2_challenge_graph.json"
 mc2_file_path <- "data/mc2.rds"
@@ -19,6 +31,16 @@ if (!file.exists(mc2_file_path)) {
   mc2 <- readRDS(mc2_file_path)
 }
 ```
+
+::: callout-note
+## Quicken the import process
+
+Importing data from the *.json* file takes time. Hence, an if-else loop is written here to ensure that the *.json* file only has to be imported once, after which, it will be saved as a *.rds* file. If the *.rds* file already exists, then it can be loaded directly with no need to re-run the *.json* file.
+:::
+
+### Data wrangling
+
+Now that the data has been imported, we can load them as `tibble` dataframes. The `select()` function is used to select the relevant columns only and at the same time to re-order them into the desired order.
 
 ```{r}
 mc2_nodes <- as_tibble(mc2$nodes) %>%
@@ -39,19 +61,27 @@ mc2_edges <- as_tibble(mc2$links) %>%
     valueofgoodsusd
   ) %>%
   distinct()
-
-mc2_edges$grp_hscode <- substr(mc2_edges$hscode, 1, 1)
 ```
+
+For every edge, it specifies a trade between a source and a target. The following code helps to yield a dataframe `mc2_nodes_extracted` of unique entities that appear on either ends of every edge (either a source or target of every trading relationship). At the same time, since some of the names of entities are rather long, a `cid` is generated as an auto-incremented company ID, so that the companies can be referred to more easily.
 
 ```{r}
-ids <- union(unique(mc2_edges$source),
-            unique(mc2_edges$target)) %>% sort() %>% as_tibble()
-colnames(ids) <- "name"
-ids <- ids %>% mutate(cid = row_number())
-ids$cid <- factor(ids$cid)
+mc2_nodes_extracted <- union(unique(mc2_edges$source),
+                             unique(mc2_edges$target)) %>% sort() %>% as_tibble()
+colnames(mc2_nodes_extracted) <- "name"
+mc2_nodes_extracted <- mc2_nodes_extracted %>%
+  mutate(cid = row_number())
 ```
 
+Since every edge represents one transaction, having some sort of grouping would help to reduce the number of edges in the network.
+
+A `grp_hscode` variable is generated as the first digit of the column `hscode`. HS codes are 6 digit numbers specifying the exact type of good that is being traded. As there are many types of goods, plotting them all based on `hscode` would be too messy. By extracting only the first digit of HS codes, some insight may still be gleaned from these broader categories (there will only be 9 categories, 1 for each digit).
+
+Thereafter, the edges are grouped by source and target companies, `grp_hscode` and `Year`. The number of trades (`num_trades`) and total weight in kg (`total_weightkg`) are summarised for each group. Only trading relationships between two companies with a frequency of more than 20 per year are included in the network. This helps to filter out the low-frequency traders that are less likely to have substantial impact on the industry.
+
 ```{r, message = FALSE}
+mc2_edges$grp_hscode <- substr(mc2_edges$hscode, 1, 1)
+
 mc2_edges_agg <- mc2_edges %>%
   group_by(source, target, grp_hscode, Year) %>%
   summarise(num_trades = n(),
@@ -61,21 +91,23 @@ mc2_edges_agg <- mc2_edges %>%
   ungroup()
 ```
 
-```{r}
-id1 <- mc2_edges_agg %>%
-  select(source) %>%
-  rename(id = source)
-id2 <- mc2_edges_agg %>%
-  select(target) %>%
-  rename(id = target)
-mc2_nodes_extracted <- rbind(id1, id2) %>%
-  distinct()
-mc2_nodes_extracted <- merge(mc2_nodes_extracted,
-                             ids,
-                             by.x = "id",
-                             by.y = "name")
-rm(id1, id2)
-```
+::: callout-warning
+## Missing description on hscode
+
+Though the data dictionary specifies that more information can be gleaned by merging with the hscode table, there is no such table that can be found from the downloads. As such, we do not have the description of the types of goods being traded, and will have to assume for this exercise that all goods provided in this dataset are fish/marine life-related.
+:::
+
+### Plotting the network graph
+
+Now, a `tbl_graph` object will be created for the purpose of plotting the network graph. At the same time, the betweenness centrality and out-degree centrality of each company (across all years of trade) will be generated for each company (represented as a node). Betweenness and out-degree are both determined based on number of trades.
+
+The reason for these measures are for the detection of potential IUU fishing:
+
+-   Companies with positive betweenness centrality would mostly likely be acting as intermediaries or distributors. Such companies would be important links for the industry network. Hence, they are less likely to be the ones involved in IUU fishing. On the contrary, if a company has zero betweenness centrality, it is unlikely to serve as an important link for the industry network.
+
+-   Companies with positive out-degree centrality, in addition to having zero betweenness centrality, would likely be fishing companies who sell what they catch. However, legitimate fishing companies who are not trying to keep a low profile would in all likelihood also engage in some sort of buying (e.g., for bait, ship components, or for other business activities), and thus not have zero betweenness centrality.
+
+-   Therefore, companies with zero betweenness centrality and positive out-degree centrality can be considered suspicious.
 
 ```{r}
 mc2_graph <- tbl_graph(nodes = mc2_nodes_extracted,
@@ -86,6 +118,24 @@ mc2_graph <- tbl_graph(nodes = mc2_nodes_extracted,
   mutate(outdegree_centrality = centrality_degree(weights = num_trades,
                                                   mode = "out"))
 ```
+
+The following code chunk creates the `ggraph` object for the year 2028. The for-loop is designed for scalability (adding years into the `years` vector will create the respective years' `ggraph` objects separately).
+
+The following elements are parts of the design of the network:
+
+-   Betweenness and out-degree centrality are re-generated for each node as the data is now filtered by each year.
+
+-   `filter(!node_is_isolated())` function helps to remove nodes that have no corresponding edges for the year.
+
+-   Edge widths represent the number of trades.
+
+-   Edge colours represent the type of goods being traded, based on `grp_hscode`.
+
+-   Node sizes represent the betweenness centrality.
+
+-   Node fills represent whether the out-degree centrality is zero or non-zero.
+
+-   Interactive elements will be explained later on.
 
 ```{r, warning = FALSE}
 years = c("2028")
@@ -119,7 +169,7 @@ for (y in years) {
           x = x,
           y = y,
           tooltip = paste0(
-            "Name:  ", id,
+            "Name:  ", name,
             "\nCompany ID:  ", cid,
             "\nOut-degree:  ", outdegree_centrality,
             "\nBetweenness:  ", betweenness_centrality
@@ -147,7 +197,9 @@ rm(y, years, mygraph)
 
 ### Network graph for year 2028
 
-```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
+To have a sense of the scale of the network, only data from the year 2028 will be plotted using the following code chunk.
+
+```{r, warning = FALSE, fig.width = 10, fig.height = 10}
 girafe(ggobj = g_2028,
        options = list(opts_hover(css = "fill:;"),
                       opts_hover_inv(css = "opacity: 0.2;"),
@@ -156,12 +208,25 @@ girafe(ggobj = g_2028,
                       opts_selection_inv(css = "opacity:0;")))
 ```
 
-```{r, results = "hold"}
-cat("There are", length(unique(
-  c(mc2_edges_agg$source, mc2_edges_agg$target)
-)), "companies in the dataset.", "\n")
+::: callout-note
+## Interactive elements
 
-suspects <- mc2_graph %>% activate(nodes) %>% data.frame() %>% tibble() %>%
+A guide on how to interact with the network:
+
+-   Mouseover each node to view a tooltip with information regarding the node.
+
+-   Click on a node of a specific colour to view only the nodes belonging to that colour (which specifies whether out-degree is zero or non-zero).
+:::
+
+For this network plot, the nodes that are small red dots are of interest, as they represent companies with zero betweenness centrality and positive out-degree centrality.
+
+### Further identifying suspicious companies
+
+Furthermore, FishEye knows from past experience that companies caught fishing illegally will shut down but will then often start up again under a different name. As such, to make the network plot clearer, the companies that close down prematurely before 2034 (the end-year of the given dataset) will be identified.
+
+```{r, results = "hold"}
+suspects <-
+  mc2_graph %>% activate(nodes) %>% data.frame() %>% tibble() %>%
   filter(betweenness_centrality == 0) %>%
   filter(outdegree_centrality > 0)
 
@@ -189,27 +254,25 @@ companies_closed_down$year_of_closure <-
 suspects <- companies_closed_down %>%
   select(name = source, year_of_closure) %>%
   filter(year_of_closure < max(mc2_edges_agg$Year)) %>%
-  filter(name %in% suspects$id)
+  filter(name %in% suspects$name)
 
-cat(
-  nrow(suspects),
-  "companies with zero betweenness centrality and non-zero out-degree centrality have closed down prematurely.",
-  "\n"
-)
-cat("These companies are:", "\n")
-
-datatable(suspects)
 rm(companies_closed_down_1, companies_closed_down_2, companies_closed_down)
 ```
+
+There are `r length(unique(c(mc2_edges_agg$source, mc2_edges_agg$target)))` companies in the dataset. `r nrow(suspects)` companies with zero betweenness centrality and positive out-degree centrality have closed down prematurely. This helps to cut down the number of nodes that are plotted.
+
+These nodes will be labelled as `suspicious`, which is a variable that will take the value of "Yes" if the company fits the criteria, and "No" otherwise.
 
 ```{r}
 mc2_graph <- mc2_graph %>%
   activate(nodes) %>%
-  mutate(suspicious = ifelse(id %in% suspects$name, "Yes", "No"))
+  mutate(suspicious = ifelse(name %in% suspects$name, "Yes", "No"))
 ```
 
+The new networks will be plotted, using data from the years 2028, 2030, and 2032 (not every year is plotted due to memory limitations).
+
 ```{r, warning = FALSE}
-years = c("2028", "2031", "2034")
+years = c("2028", "2030", "2032")
 
 for (y in years) {
   mygraph <- paste("mc2", "graph", y, sep = "_")
@@ -240,7 +303,7 @@ for (y in years) {
           x = x,
           y = y,
           tooltip = paste0(
-            "Name:  ", id,
+            "Name:  ", name,
             "\nCompany ID:  ", cid,
             "\nOut-degree:  ", outdegree_centrality,
             "\nBetweenness:  ", betweenness_centrality,
@@ -267,7 +330,7 @@ for (y in years) {
 rm(y, years, mygraph)
 ```
 
-### Tabbed by years
+### Network plots for 2028, 2030, and 2032
 
 ::: panel-tabset
 ## 2028
@@ -281,10 +344,10 @@ girafe(ggobj = g_2028,
                       opts_selection_inv(css = "opacity:0;")))
 ```
 
-## 2031
+## 2030
 
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
-girafe(ggobj = g_2031,
+girafe(ggobj = g_2030,
        options = list(opts_hover(css = "fill:;"),
                       opts_hover_inv(css = "opacity: 0.2;"),
                       opts_selection(type = "multiple", only_shiny = FALSE,
@@ -292,10 +355,10 @@ girafe(ggobj = g_2031,
                       opts_selection_inv(css = "opacity:0;")))
 ```
 
-## 2034
+## 2032
 
 ```{r, echo = FALSE, warning = FALSE, fig.width = 10, fig.height = 10}
-girafe(ggobj = g_2034,
+girafe(ggobj = g_2032,
        options = list(opts_hover(css = "fill:;"),
                       opts_hover_inv(css = "opacity: 0.2;"),
                       opts_selection(type = "multiple", only_shiny = FALSE,
@@ -304,3 +367,19 @@ girafe(ggobj = g_2034,
 ```
 :::
 
+::: callout-note
+## Companies suspected of IUU fishing
+
+These are the red nodes within the above network plots. For starters, the less connected nodes on the perimeter of the network can be explored first.
+:::
+
+The list of suspicious companies can be found in the data table below:
+
+```{r, warning = FALSE}
+mc2_graph %>%
+  activate(nodes) %>%
+  data.frame() %>%
+  filter(suspicious == "Yes") %>%
+  select(name, cid, betweenness_centrality, outdegree_centrality) %>%
+  datatable(options = list(order = list(list(4, 'desc'))))
+```
