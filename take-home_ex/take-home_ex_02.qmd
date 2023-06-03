@@ -10,9 +10,7 @@ pacman::p_load(tidyverse, dplyr, gganimate, ggiraph, ggplot2, crosstalk, ggrepel
 
 ## Detecting illegal, unreported, and unregulated (IUU) fishing
 
-FishEye International has provided import/export data ranging from the year 2028 to 2034 regarding Oceanus' fishing industries. This exercise attempts to make use of the data provided to detect those who are involved in IUU fishing, and in particular, to answer the following questions:
-
--   Use visual analytics to identify temporal patterns for individual entities and between entities in the knowledge graph FishEye created from trade records. Categorize the types of business relationship patterns you find.
+FishEye International has provided import/export data ranging from the year 2028 to 2034 regarding Oceanus' fishing industries. This exercise attempts to make use of the data provided to detect those who are involved in IUU fishing, in particular, to answer the following question:
 
 -   Identify companies that fit a pattern of illegal fishing. Use visualizations to support your conclusions and your confidence in them.
 
