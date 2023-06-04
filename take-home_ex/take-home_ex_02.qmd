@@ -14,7 +14,7 @@ FishEye International has provided import/export data ranging from the year 2028
 
 -   Identify companies that fit a pattern of illegal fishing. Use visualizations to support your conclusions and your confidence in them.
 
-### Import data
+## Import data
 
 The following code chunk is used to import the data. Since the provided data is in *.json* format, the `fromJSON()` function is used:
 
@@ -36,7 +36,7 @@ if (!file.exists(mc2_file_path)) {
 Importing data from the *.json* file takes time. Hence, an if-else loop is written here to ensure that the *.json* file only has to be imported once, after which, it will be saved as a *.rds* file. If the *.rds* file already exists, then it can be loaded directly with no need to re-run the *.json* file.
 :::
 
-### Data wrangling
+## Data wrangling
 
 Now that the data has been imported, we can load them as `tibble` dataframes. The `select()` function is used to select the relevant columns only and at the same time to re-order them into the desired order.
 
@@ -95,7 +95,7 @@ mc2_edges_agg <- mc2_edges %>%
 Though the data dictionary specifies that more information can be gleaned by merging with the hscode table, there is no such table that can be found from the downloads. As such, we do not have the description of the types of goods being traded, and will have to assume for this exercise that all goods provided in this dataset are fish/marine life-related.
 :::
 
-### Plotting the network graph
+## Plotting the network graph
 
 Now, a `tbl_graph` object will be created for the purpose of plotting the network graph. At the same time, the betweenness centrality and out-degree centrality of each company (across all years of trade) will be generated for each company (represented as a node). Betweenness and out-degree are both determined based on number of trades.
 
@@ -218,7 +218,7 @@ A guide on how to interact with the network:
 
 For this network plot, the nodes that are small red dots are of interest, as they represent companies with zero betweenness centrality and positive out-degree centrality.
 
-### Further identifying suspicious companies
+## Further identifying suspicious companies
 
 Furthermore, FishEye knows from past experience that companies caught fishing illegally will shut down but will then often start up again under a different name. As such, to make the network plot clearer, the companies that close down prematurely before 2034 (the end-year of the given dataset) will be identified.
 
@@ -385,7 +385,7 @@ mc2_graph %>%
   datatable(options = list(order = list(list(4, 'desc'))))
 ```
 
-### Making the network plot even smaller
+## Making the network plot even smaller
 
 Lastly, with clearer clarity on the `hscode` and which are the goods most associated with IUU fishing, the network can be made smaller.
 
