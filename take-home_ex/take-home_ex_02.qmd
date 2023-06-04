@@ -270,6 +270,9 @@ mc2_graph <- mc2_graph %>%
 The new networks will be plotted, using data from the years 2028, 2030, and 2032 (not every year is plotted due to memory limitations).
 
 ```{r, warning = FALSE}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 years = c("2028", "2030", "2032")
 
 for (y in years) {
@@ -380,4 +383,85 @@ mc2_graph %>%
   filter(suspicious == "Yes") %>%
   select(name, cid, betweenness_centrality, outdegree_centrality) %>%
   datatable(options = list(order = list(list(4, 'desc'))))
+```
+
+### Making the network plot even smaller
+
+Lastly, with clearer clarity on the `hscode` and which are the goods most associated with IUU fishing, the network can be made smaller.
+
+For example, focusing only on goods with `grp_hscode == 3`:
+
+```{r, warning = FALSE}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+years = c("2028")
+
+for (y in years) {
+  mygraph <- paste("mc2", "graph", y, sep = "_")
+  assign(
+    mygraph,
+    mc2_graph %>%
+      activate(edges) %>%
+      filter(Year == y) %>%
+      filter(grp_hscode == "3") %>%
+      activate(nodes) %>%
+      filter(!node_is_isolated()) %>%
+      mutate(betweenness_centrality = centrality_betweenness(weights = num_trades)) %>%
+      mutate(outdegree_centrality = centrality_degree(weights = num_trades,
+                                                      mode = "out"))
+  )
+
+  assign(
+    paste("g", y, sep = "_"),
+    ggraph(get(mygraph),
+           layout = "nicely") +
+      geom_edge_link(aes(width = num_trades,
+                         color = grp_hscode),
+                     alpha = 0.6) +
+      scale_edge_width(range = c(0.4, 4), name = "Total weight") +
+      scale_edge_color_brewer(name = "HS code group",
+                              palette = "Set1") +
+      geom_point_interactive(
+        aes(
+          x = x,
+          y = y,
+          tooltip = paste0(
+            "Name:  ", name,
+            "\nCompany ID:  ", cid,
+            "\nOut-degree:  ", outdegree_centrality,
+            "\nBetweenness:  ", betweenness_centrality,
+            "\nSuspicious?:  ", suspicious
+          ),
+          data_id = suspicious,
+          size = betweenness_centrality,
+          fill = suspicious
+        ),
+        colour = "grey20",
+        shape = 21,
+        alpha = 0.8
+      ) +
+      scale_fill_manual(values = c("cyan", "firebrick1"), name = "Suspicious?") +
+      scale_size_continuous(range = (c(1, 10)), name = "Betweenness") +
+      theme_graph(
+        foreground = "grey20",
+      ) +
+      labs(title = "Network plot for year 2028 and HS Group 3") +
+      theme(plot.title = element_text(size = 11))
+  )
+}
+
+rm(y, years, mygraph)
+```
+
+```{r, warning = FALSE, fig.width = 10, fig.height = 10}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+girafe(ggobj = g_2028,
+       options = list(opts_hover(css = "fill:;"),
+                      opts_hover_inv(css = "opacity: 0.2;"),
+                      opts_selection(type = "multiple", only_shiny = FALSE,
+                                     css = "opacity:1;"),
+                      opts_selection_inv(css = "opacity:0;")))
 ```
