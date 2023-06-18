@@ -37,6 +37,7 @@ website:
       contents:
         - href: take-home_ex/take-home_ex_01.qmd
         - href: take-home_ex/take-home_ex_02.qmd
+        - href: take-home_ex/take-home_ex_03.qmd
 
 format:
   html:

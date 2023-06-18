@@ -1,0 +1,862 @@
+---
+title: "Take-home Exercise 03"
+sidebar: false
+pagetitle: "Take-home Ex 03"
+---
+
+```{r, include = FALSE}
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce, skimr, tidytext, tidyverse, DT, ggiraph, tm, topicmodels)
+```
+
+## Developing a visual analytics process to find similar businesses and group them
+
+FishEye International has provided import/export data ranging from the year 2028 to 2034 regarding Oceanus' fishing industries. This exercise attempts to make use of the data provided to answer the following question:
+
+-   Develop a visual analytics process to find similar businesses and group them. This analysis should focus on a business's most important features and present those features clearly to the user.
+
+The following features will be visualised on the subsequent network plots:
+
+-   Description of product services (if available), broken down into product types via topic modelling.
+
+-   Number of related persons tied to each person/company listed as nodes within the data, represented as edges.
+
+-   Revenue of each person/company listed as nodes within the data.
+
+## Import data
+
+The following code chunk is used to import the data. Since the provided data is in *.json* format, the `fromJSON()` function is used:
+
+```{r, warning = FALSE}
+json_file_path <- "data/MC3.json"
+mc3_file_path <- "data/mc3.rds"
+
+if (!file.exists(mc3_file_path)) {
+  mc3_data <- fromJSON(json_file_path)
+  saveRDS(mc3_data, mc3_file_path)
+} else {
+  mc3_data <- readRDS(mc3_file_path)
+}
+```
+
+::: callout-note
+## Quicken the import process
+
+Importing data from the *.json* file may take time. Hence, an if-else loop is written here to ensure that the *.json* file only has to be imported once, after which, it will be saved as a *.rds* file. If the *.rds* file already exists, then it can be loaded directly with no need to re-run the *.json* file.
+:::
+
+## Data wrangling
+
+Now that the data has been imported, we can load them as `tibble` dataframes. The `mutate()` function is used to ensure that the imported columns of the dataset are in the appropriate format.
+
+First, the edges are loaded:
+
+```{r, message = FALSE}
+mc3_edges <- as_tibble(mc3_data$links) %>% 
+  distinct() %>%
+  mutate(source = as.character(source),
+         target = as.character(target),
+         type = as.character(type)) %>%
+  group_by(source, target, type) %>%
+    summarise(weights = n()) %>%
+  filter(source!=target) %>%
+  ungroup()
+```
+
+Then, the nodes are extracted:
+
+```{r, warning = FALSE}
+mc3_nodes <- as_tibble(mc3_data$nodes) %>%
+  mutate(country = as.character(country),
+         id = as.character(id),
+         product_services = as.character(product_services),
+         revenue_omu = as.numeric(as.character(revenue_omu)),
+         type = as.character(type)) %>%
+  select(id, country, type, revenue_omu, product_services)
+```
+
+`skim()` is used to display some summary statistics of both dataframes:
+
+```{r}
+skim(mc3_nodes)
+skim(mc3_edges)
+```
+
+Within the `mc3_nodes` dataframe, there is a `product_services` column that contains text that can be very long (1737 characters at its maximum). An attempt will be made to use topic modelling to classify the types of products associated with each `id` based on this `product_services` description.
+
+Packages used for topic modelling are `tm` and `topicmodels`. Latent dirichlet allocation algorithm will be used for topic modelling.
+
+### Pre-processing
+
+```{r, warning = FALSE}
+# Change "character(0)" to "Unknown"
+mc3_nodes$product_services <-
+  ifelse(mc3_nodes$product_services == "character(0)",
+         "Unknown",
+         mc3_nodes$product_services)
+
+# Exclude "Unknown" from topic modelling
+filtered_mc3_nodes <- mc3_nodes %>%
+  filter(product_services != "Unknown")
+
+# Preprocessing
+corpus <- Corpus(VectorSource(filtered_mc3_nodes$product_services))
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+corpus <- tm_map(corpus, stripWhitespace)
+corpus <- tm_map(corpus, stemDocument)
+
+# Text Transformation
+dtm <- DocumentTermMatrix(corpus)
+```
+
+### Topic modelling
+
+```{r}
+# Build LDA model
+num_topics = 8
+lda <- LDA(dtm, k = num_topics)
+
+# Assigning topics as product_type
+topics <- topics(lda, 1)  # Get the topic probabilities for each document
+filtered_mc3_nodes$product_type <- topics
+```
+
+The following code chunk generates a datatable from `DT` package to help sample a few of each `product_type` to see if they are accurate:
+
+```{r}
+filtered_mc3_nodes %>%
+  group_by(product_type) %>%
+  sample_n(3) %>%
+  datatable()
+```
+
+::: callout-note
+## Topic modelling classifies imperfectly but is still useful
+
+Classification into `product_type` is done using the LDA model on the `product_services` column. From the data table above, we can see that there may be some misclassifications:
+
+-   Product services that are drastically different are still grouped together.
+
+-   Some nodes would better belong to another product type.
+
+Nevertheless, the misclassifications are relatively few. Based on a few runs, `num_topics = 8` seems to yield the most accurate outcomes and best legibility of network plots, so the number of topics will be kept at 8.
+:::
+
+Earlier, there were "Unknown" in the `product_services` column. For these rows, the corresponding `product_type` shall be set as 0.
+
+To be precise, there were `r count(mc3_nodes %>% filter(product_services == "Unknown"))` "Unknown", which is quite a large proportion of the `r count(mc3_nodes)` nodes. This implies poor quality of data, though there is not much that can be done about it.
+
+```{r}
+mc3_nodes <- left_join(mc3_nodes, filtered_mc3_nodes, by = names(mc3_nodes))
+mc3_nodes$product_type <-
+  ifelse(is.na(mc3_nodes$product_type),
+         0,
+         mc3_nodes$product_type)
+```
+
+Lastly, `product_type` is checked to see if all product types are filled. Even distribution across `product_type` will aid in the legibility of subsequent network plots. If certain `product_type` are sparse, the number of topics during topic modelling can be reduced.
+
+```{r}
+summary(mc3_nodes$product_type %>% factor())
+```
+
+In this case, the distribution across `product_type` looks fine. Some variation is expected.
+
+## Network graph plotting - Data preparation
+
+To explore the data further, network graphs will be plotted using `ggraph()` package.
+
+Nodes are found in the `mc3_nodes` dataframe. Edges are found in `mc3_edges`. However, not all nodes from `mc3_nodes` are found in `mc3_edge`'s `source` column. Since information on nodes are found only in `mc3_nodes`, edges with `source` nodes that are not found in `mc3_nodes` should be removed, as there is no additional useful information that can be gleaned from these nodes.
+
+`source` nodes in `mc3_edges` appear to represent companies and persons (based on the data definition provided), while `target` nodes appear to represent people, with their `type` specified as an edge attribute. This can be transferred over to the nodes dataframe. However, nodes with their `type` already defined in `mc3_nodes` should be retained.
+
+```{r}
+mc3_edges_cleaned <- mc3_edges %>%
+  filter(source %in% mc3_nodes$id)
+
+id1 <- mc3_edges_cleaned %>%
+  select(source) %>%
+  rename(id = source) %>%
+  mutate(type = "Company", node_type = "source")
+id2 <- mc3_edges_cleaned %>%
+  select(target, type) %>%
+  rename(id = target) %>%
+  mutate(node_type = "target")
+
+mc3_nodes_combined <- rbind(id1, id2) %>%
+  distinct() %>%
+  left_join(mc3_nodes,
+            by = "id")
+mc3_nodes_combined$type <-
+  ifelse(
+    is.na(mc3_nodes_combined$type.y), # if type of id is not defined in mc3_nodes
+    mc3_nodes_combined$type.x, # then use the value that was generated on top within rbind(id1, id2)
+    mc3_nodes_combined$type.y # else, just use the type of id defined in mc3_nodes
+  )
+mc3_nodes_combined <- mc3_nodes_combined %>%
+  select(id, country, type, revenue_omu, product_services, product_type, node_type)
+
+mc3_nodes_combined$product_type <-
+  ifelse(mc3_nodes_combined$node_type == "source" & is.na(mc3_nodes_combined$product_type),
+         0,
+         mc3_nodes_combined$product_type)
+```
+
+A `tbl_graph()` object will be created using these dataframes, while at same time generating some centrality measures, namely, betweenness and closeness. Note that Fisheye has stated that this graph is undirected, hence it must be specified that `directed = FALSE`.
+
+```{r}
+mc3_graph <- tbl_graph(nodes = mc3_nodes_combined,
+                       edges = mc3_edges_cleaned,
+                       directed = FALSE) %>%
+  mutate(betweenness_centrality = centrality_betweenness(),
+         degree_centrality = centrality_degree())
+```
+
+It may be helpful to segregate the networks by the quartile of each node's revenue:
+
+```{r, results = "hold"}
+revenue_quartiles <- summary(mc3_nodes_combined$revenue_omu)
+print(revenue_quartiles)
+one <- revenue_quartiles[2]
+two <- revenue_quartiles[3]
+three <- revenue_quartiles[5]
+```
+
+## Network plots
+
+First, a function will be created to plot the network so that the huge chunk of code does not have to be repeated so many times:
+
+```{r}
+create_network <- function(mygraph) {
+  
+  g <- ggraph(mygraph,
+              layout = "nicely") +
+    geom_edge_link(aes(),
+                   color = "black",
+                   alpha = 0.8) +
+    geom_point_interactive(
+      aes(
+        x = x,
+        y = y,
+        tooltip = paste0(
+          "Name:  ", id,
+          ifelse(is.na(country), "", paste0("\nCountry:  ", country)),
+          ifelse(is.na(type), "", paste0("\nType:  ", type)),
+          ifelse(is.na(revenue_omu), "", paste0("\nRevenue:  ", round(revenue_omu, 2))),
+          ifelse(is.na(product_services), "", paste0("\nProduct services:  ", product_services)),
+          ifelse(is.na(product_type), "", paste0("\nProduct type:  ", product_type))
+        ),
+        data_id = type,
+        size = ifelse(is.na(revenue_omu),
+                      0,
+                      revenue_omu), 
+        fill = type
+      ),
+      colour = "grey20",
+      shape = 21,
+      alpha = 1
+    ) +
+    scale_fill_discrete(name = "Node type") +
+    scale_size_continuous(name = "Revenue") +
+    theme_graph(foreground = "grey20", ) +
+    labs(title = "") +
+    theme(plot.title = element_text(size = 11))
+  
+  girafe(
+    ggobj = g,
+    options = list(
+      opts_hover(css = "fill:;"),
+      opts_hover_inv(css = "opacity: 0.2;"),
+      opts_selection(
+        type = "multiple",
+        only_shiny = FALSE,
+        css = "opacity:1;"
+      ),
+      opts_selection_inv(css = "opacity:0;")
+    )
+  )
+  
+}
+```
+
+::: callout-note
+## Subsequent network plots are tabbed by `product_type` of nodes.
+
+This allows for closer investigation of patterns according to product types.
+:::
+
+### Network of companies ranked within 1st quartile by revenue or have unknown revenue
+
+::: panel-tabset
+## Unknown
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu <= one | is.na(revenue_omu)) %>%
+    filter(product_type == 0 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 1
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu <= one | is.na(revenue_omu)) %>%
+    filter(product_type == 1 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 2
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu <= one | is.na(revenue_omu)) %>%
+    filter(product_type == 2 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 3
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu <= one | is.na(revenue_omu)) %>%
+    filter(product_type == 3 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 4
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu <= one | is.na(revenue_omu)) %>%
+    filter(product_type == 4 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 5
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu <= one | is.na(revenue_omu)) %>%
+    filter(product_type == 5 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 6
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu <= one | is.na(revenue_omu)) %>%
+    filter(product_type == 6 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 7
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu <= one | is.na(revenue_omu)) %>%
+    filter(product_type == 7 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 8
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu <= one | is.na(revenue_omu)) %>%
+    filter(product_type == 8 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+:::
+
+### Network of companies ranked within 2nd quartile by revenue
+
+::: panel-tabset
+## Unknown
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > one & revenue_omu <= two) | node_type == "target") %>%
+    filter(product_type == 0 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 1
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > one & revenue_omu <= two) | node_type == "target") %>%
+    filter(product_type == 1 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 2
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > one & revenue_omu <= two) | node_type == "target") %>%
+    filter(product_type == 2 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 3
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > one & revenue_omu <= two) | node_type == "target") %>%
+    filter(product_type == 3 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 4
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > one & revenue_omu <= two) | node_type == "target") %>%
+    filter(product_type == 4 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 5
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > one & revenue_omu <= two) | node_type == "target") %>%
+    filter(product_type == 5 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 6
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > one & revenue_omu <= two) | node_type == "target") %>%
+    filter(product_type == 6 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 7
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > one & revenue_omu <= two) | node_type == "target") %>%
+    filter(product_type == 7 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 8
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > one & revenue_omu <= two) | node_type == "target") %>%
+    filter(product_type == 8 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+:::
+
+### Network of companies ranked within 3rd quartile by revenue
+
+::: panel-tabset
+## Unknown
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > two & revenue_omu <= three) | node_type == "target") %>%
+    filter(product_type == 0 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 1
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > two & revenue_omu <= three) | node_type == "target") %>%
+    filter(product_type == 1 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 2
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > two & revenue_omu <= three) | node_type == "target") %>%
+    filter(product_type == 2 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 3
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > two & revenue_omu <= three) | node_type == "target") %>%
+    filter(product_type == 3 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 4
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > two & revenue_omu <= three) | node_type == "target") %>%
+    filter(product_type == 4 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 5
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > two & revenue_omu <= three) | node_type == "target") %>%
+    filter(product_type == 5 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 6
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > two & revenue_omu <= three) | node_type == "target") %>%
+    filter(product_type == 6 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 7
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > two & revenue_omu <= three) | node_type == "target") %>%
+    filter(product_type == 7 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 8
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter((revenue_omu > two & revenue_omu <= three) | node_type == "target") %>%
+    filter(product_type == 8 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+:::
+
+### Network of companies ranked within 4th quartile by revenue
+
+::: panel-tabset
+## Unknown
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu > three | node_type == "target") %>%
+    filter(product_type == 0 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 1
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu > three | node_type == "target") %>%
+    filter(product_type == 1 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 2
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu > three | node_type == "target") %>%
+    filter(product_type == 2 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 3
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu > three | node_type == "target") %>%
+    filter(product_type == 3 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 4
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu > three | node_type == "target") %>%
+    filter(product_type == 4 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 5
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu > three | node_type == "target") %>%
+    filter(product_type == 5 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 6
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu > three | node_type == "target") %>%
+    filter(product_type == 6 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 7
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu > three | node_type == "target") %>%
+    filter(product_type == 7 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+
+## 8
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 6}
+#| code-fold: true
+#| code-summary: "Code"
+
+create_network(
+  mc3_graph %>%
+    activate(nodes) %>%
+    filter(revenue_omu > three | node_type == "target") %>%
+    filter(product_type == 8 | node_type == "target") %>%
+    filter(!node_is_isolated())
+)
+```
+:::
+
+## Observations from network plots
+
+Based on the network plots, some observations are:
+
+-   As revenue increases, there are less 'Unknowns' in the `product_services` column. This makes sense as large companies are likely to be more prominent, resulting in better data quality.
+
+-   There are still some network plots that are very dense and not much information can be gleaned from them. These plots are:
+
+    -   1st quartile by revenue: Product type = 'Unknown'
+
+    -   2nd quartile by revenue: Product type = 'Unknown'
+
+-   Consequently, if data quality can be improved in terms of obtaining the `product_services` description for more nodes, they could be classified for better visualisation instead of being lumped together under 'Unknown'.
+
+-   High revenue companies do not necessarily have more beneficial owners. Quite a lot of high revenue companies have only a few beneficial owners and conversely, low revenue companies have numerous beneficial owners.
+
+-   Some beneficial owners or company contacts are involved with more than one company, though this is quite rare.
