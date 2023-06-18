@@ -204,7 +204,7 @@ mc3_nodes_combined$product_type <-
          mc3_nodes_combined$product_type)
 ```
 
-A `tbl_graph()` object will be created using these dataframes, while at same time generating some centrality measures, namely, betweenness and closeness. Note that Fisheye has stated that this graph is undirected, hence it must be specified that `directed = FALSE`.
+A `tbl_graph()` object will be created using these dataframes, while at same time generating some centrality measures, namely, betweenness and degree. Note that FishEye has stated that this graph is undirected, hence it must be specified that `directed = FALSE`.
 
 ```{r}
 mc3_graph <- tbl_graph(nodes = mc3_nodes_combined,
@@ -285,6 +285,16 @@ create_network <- function(mygraph) {
 ## Subsequent network plots are tabbed by `product_type` of nodes.
 
 This allows for closer investigation of patterns according to product types.
+:::
+
+::: callout-note
+## Interactive elements
+
+A guide on how to interact with the network plots:
+
+-   Mouseover each node to view a tooltip with information regarding the node.
+
+-   Click on a node of a specific colour to view only the nodes belonging to that colour (which specifies whether the node is a company, beneficial owner, or company contact).
 :::
 
 ### Network of companies ranked within 1st quartile by revenue or have unknown revenue
