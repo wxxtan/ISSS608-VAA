@@ -300,6 +300,7 @@ A guide on how to interact with the network plots:
 ### Network of companies ranked within 1st quartile by revenue or have unknown revenue
 
 Tabbed by product type
+
 ::: panel-tabset
 ## Unknown
 
@@ -440,6 +441,7 @@ create_network(
 ### Network of companies ranked within 2nd quartile by revenue
 
 Tabbed by product type
+
 ::: panel-tabset
 ## Unknown
 
@@ -580,6 +582,7 @@ create_network(
 ### Network of companies ranked within 3rd quartile by revenue
 
 Tabbed by product type
+
 ::: panel-tabset
 ## Unknown
 
@@ -720,6 +723,7 @@ create_network(
 ### Network of companies ranked within 4th quartile by revenue
 
 Tabbed by product type
+
 ::: panel-tabset
 ## Unknown
 
